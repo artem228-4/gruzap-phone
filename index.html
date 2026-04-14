@@ -1,0 +1,551 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GRUZAP Phone — Sales Control</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #060812;
+      --bg-soft: #0a0f1e;
+      --panel: rgba(13, 20, 38, 0.8);
+      --panel-2: rgba(18, 27, 48, 0.76);
+      --line: rgba(110, 135, 183, 0.25);
+      --line-strong: rgba(110, 135, 183, 0.42);
+      --text: #e6eeff;
+      --muted: #8ea3c8;
+      --blue: #3f8cff;
+      --cyan: #2fe2ff;
+      --teal: #20d9b1;
+      --violet: #9c6bff;
+      --warn: #ffb65c;
+      --red: #ff5f7f;
+      --radius: 20px;
+      --shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+      --glow-blue: 0 0 30px rgba(63, 140, 255, 0.32);
+      --glow-cyan: 0 0 28px rgba(47, 226, 255, 0.26);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: Manrope, sans-serif;
+      color: var(--text);
+      min-height: 100vh;
+      background:
+        radial-gradient(900px 500px at -10% -20%, rgba(47,226,255,.16), transparent 60%),
+        radial-gradient(780px 480px at 110% -10%, rgba(156,107,255,.16), transparent 62%),
+        radial-gradient(700px 350px at 50% 115%, rgba(32,217,177,.12), transparent 68%),
+        radial-gradient(400px 220px at 26% 34%, rgba(63,140,255,.16), transparent 72%),
+        linear-gradient(180deg, var(--bg) 0%, var(--bg-soft) 100%);
+    }
+
+    .grid-overlay {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .2;
+      background-image:
+        linear-gradient(rgba(143, 174, 230, 0.1) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(143, 174, 230, 0.1) 1px, transparent 1px);
+      background-size: 30px 30px;
+      mask-image: radial-gradient(circle at center, black 35%, transparent 100%);
+    }
+
+    .app {
+      position: relative;
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 16px 14px 42px;
+      z-index: 1;
+    }
+
+    .hero {
+      border: 1px solid var(--line-strong);
+      border-radius: 24px;
+      padding: 20px 18px;
+      background: linear-gradient(140deg, rgba(20,30,55,.86) 0%, rgba(11,18,34,.82) 100%);
+      box-shadow: var(--shadow), inset 0 0 0 1px rgba(167, 196, 245, 0.08), var(--glow-blue);
+      margin-bottom: 14px;
+      backdrop-filter: blur(8px);
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 11px;
+      border-radius: 999px;
+      border: 1px solid rgba(47, 226, 255, .44);
+      background: rgba(47, 226, 255, .08);
+      color: var(--cyan);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+
+    .hero h1 {
+      margin: 14px 0 8px;
+      font-family: Orbitron, sans-serif;
+      font-size: clamp(24px, 6vw, 42px);
+      line-height: 1.05;
+      letter-spacing: .01em;
+      text-shadow: 0 0 20px rgba(63, 140, 255, .38);
+    }
+
+    .hero p {
+      margin: 0;
+      max-width: 760px;
+      color: #b7c8e5;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    .shell { display: grid; gap: 18px; }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow), inset 0 0 0 1px rgba(167,196,245,.06);
+      padding: 18px;
+      backdrop-filter: blur(10px);
+    }
+
+    .card h2 {
+      margin: 0 0 6px;
+      font-family: Orbitron, sans-serif;
+      font-size: 20px;
+      letter-spacing: .02em;
+      color: #dce8ff;
+    }
+
+    .muted {
+      margin: 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+
+    .path { margin-top: 10px; display: grid; gap: 8px; }
+
+    .step {
+      display: grid;
+      grid-template-columns: 34px 1fr;
+      gap: 10px;
+      padding: 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(122, 148, 197, 0.25);
+      background: linear-gradient(180deg, rgba(17, 27, 49, .72) 0%, rgba(12, 20, 37, .72) 100%);
+    }
+
+    .num {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      border: 1px solid rgba(63, 140, 255, .45);
+      background: rgba(63, 140, 255, .13);
+      color: #9cc3ff;
+      display: grid;
+      place-items: center;
+      font-weight: 800;
+      font-size: 13px;
+      box-shadow: 0 0 15px rgba(63, 140, 255, .2);
+    }
+
+    .step b { display: block; font-size: 15px; margin-bottom: 2px; color: #e7f0ff; }
+    .step span { color: var(--muted); font-size: 13px; line-height: 1.42; }
+
+    .form { display: grid; gap: 10px; margin-top: 8px; }
+
+    label {
+      display: block;
+      margin-bottom: 6px;
+      font-size: 12px;
+      letter-spacing: .03em;
+      color: #8ba4cd;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    input, textarea {
+      width: 100%;
+      border: 1px solid rgba(124, 152, 204, .35);
+      border-radius: 12px;
+      background: rgba(8, 14, 28, .86);
+      color: var(--text);
+      padding: 12px;
+      font: inherit;
+      outline: none;
+      transition: .15s ease;
+    }
+
+    textarea { min-height: 96px; resize: vertical; }
+
+    input:focus, textarea:focus {
+      border-color: rgba(47, 226, 255, .65);
+      box-shadow: 0 0 0 3px rgba(47, 226, 255, .14), var(--glow-cyan);
+    }
+
+    .actions {
+      display: grid;
+      gap: 12px;
+      margin-top: 14px;
+      margin-bottom: 14px;
+      padding: 10px;
+      border-radius: 16px;
+      border: 1px solid rgba(122, 152, 207, .28);
+      background: linear-gradient(180deg, rgba(23, 35, 62, .7), rgba(13, 21, 39, .7));
+    }
+
+    button {
+      border: 0;
+      border-radius: 14px;
+      padding: 14px 14px;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform .08s ease, filter .15s ease, box-shadow .15s ease;
+    }
+
+    button:active { transform: translateY(1px); }
+
+    .btn-primary {
+      color: #021021;
+      background: linear-gradient(135deg, #4ca4ff 0%, #2fe2ff 100%);
+      box-shadow: 0 10px 24px rgba(47, 226, 255, .2);
+    }
+
+    .btn-success {
+      color: #012019;
+      background: linear-gradient(135deg, #2cf7c8 0%, #73ffd5 100%);
+      box-shadow: 0 10px 24px rgba(32, 217, 177, .2);
+    }
+
+    .btn-soft {
+      color: #d5e5ff;
+      background: linear-gradient(180deg, rgba(37, 57, 95, .84), rgba(23, 37, 64, .84));
+      border: 1px solid rgba(122, 152, 207, .35);
+    }
+
+    .btn-warning {
+      color: #1f1200;
+      background: linear-gradient(135deg, #ffd074 0%, #ffb85a 100%);
+    }
+
+    .actions button:hover {
+      filter: brightness(1.04);
+      box-shadow: 0 12px 26px rgba(0, 0, 0, .28);
+    }
+
+    .status {
+      border-radius: 12px;
+      border: 1px solid rgba(110, 135, 183, .34);
+      background: rgba(14, 24, 44, .75);
+      color: #a6bddf;
+      padding: 12px;
+      font-size: 13px;
+      line-height: 1.42;
+    }
+
+    .status.ok {
+      border-color: rgba(32, 217, 177, .45);
+      background: rgba(13, 42, 36, .66);
+      color: #8ef1d6;
+    }
+
+    .status.err {
+      border-color: rgba(255, 95, 127, .48);
+      background: rgba(47, 14, 23, .7);
+      color: #ffafbf;
+    }
+
+    .overview { display: grid; gap: 8px; margin-top: 10px; }
+
+    .kpi {
+      border: 1px solid rgba(112, 140, 192, .32);
+      border-radius: 12px;
+      padding: 10px;
+      background: linear-gradient(180deg, rgba(16, 26, 46, .8), rgba(12, 20, 36, .76));
+    }
+
+    .kpi .k { font-size: 12px; color: #8ea3c8; margin-bottom: 3px; font-weight: 600; }
+    .kpi .v { font-size: 16px; font-weight: 800; color: #e8f1ff; }
+
+    .reports { display: grid; gap: 14px; }
+
+    .report {
+      border: 1px solid rgba(112, 140, 192, .3);
+      border-radius: 14px;
+      padding: 12px;
+      background: linear-gradient(180deg, rgba(15, 24, 43, .84), rgba(11, 18, 33, .82));
+      min-height: 260px;
+    }
+
+    .report h3 {
+      margin: 0 0 6px;
+      font-family: Orbitron, sans-serif;
+      font-size: 19px;
+      letter-spacing: .02em;
+    }
+
+    .meta { margin: 0 0 8px; color: var(--muted); font-size: 13px; }
+
+    .pill {
+      display: inline-block;
+      margin-left: 8px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 800;
+      border: 1px solid;
+    }
+
+    .pill.ok { color: #90f8d9; border-color: rgba(32, 217, 177, .54); background: rgba(16, 65, 52, .56); }
+    .pill.off { color: #ffd49a; border-color: rgba(255, 182, 92, .55); background: rgba(70, 47, 16, .58); }
+
+    pre {
+      margin: 0;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      font: inherit;
+      color: #ccdbf5;
+      line-height: 1.5;
+      font-size: 14px;
+    }
+
+    .note { margin: 2px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
+
+    @media (min-width: 860px) {
+      .app { padding: 24px 18px 48px; }
+      .shell { grid-template-columns: 1.02fr 1fr; align-items: start; }
+      .actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .overview { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .reports { grid-column: 1 / -1; grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="grid-overlay" aria-hidden="true"></div>
+
+  <main class="app">
+    <section class="hero">
+      <div class="chip">GRUZAP PHONE · SALES CONTROL</div>
+      <h1>Панель контроля звонков</h1>
+      <p>Задайте фокус недели, запустите анализ и получите персональные рекомендации по каждому менеджеру в живом формате.</p>
+    </section>
+
+    <section class="shell">
+      <article class="card">
+        <h2>Маршрут для новичка</h2>
+        <p class="muted">Если вы в панели впервые, просто следуйте шагам.</p>
+        <div class="path">
+          <div class="step"><div class="num">01</div><div><b>Задайте тему недели</b><span>Что проверяем в переговорах этой недели.</span></div></div>
+          <div class="step"><div class="num">02</div><div><b>Сохраните тему</b><span>Фокус уходит в n8n и фиксируется для запусков.</span></div></div>
+          <div class="step"><div class="num">03</div><div><b>Запустите анализ</b><span>Через 1-2 минуты получите карточки по Светлане и Константину.</span></div></div>
+        </div>
+        <p class="note">Если звонков не было — система покажет это явно, без пустых “красивых” экранов.</p>
+      </article>
+
+      <article class="card">
+        <h2>Центр управления</h2>
+        <div class="form">
+          <div>
+            <label for="weeklyTheme">Тема недели (Илья)</label>
+            <textarea id="weeklyTheme">Работа с возражением по цене</textarea>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="btn-primary" id="saveThemeBtn">Сохранить тему</button>
+          <button class="btn-success" id="runBtn">Запустить анализ</button>
+          <button class="btn-soft" id="refreshBtn">Обновить состояние</button>
+          <button class="btn-warning" id="clearBtn">Очистить экран</button>
+        </div>
+
+        <div id="status" class="status">Готово к работе.</div>
+
+        <div class="overview">
+          <div class="kpi"><div class="k">Последний запуск</div><div class="v" id="lastRun">-</div></div>
+          <div class="kpi"><div class="k">Период анализа</div><div class="v" id="period">-</div></div>
+          <div class="kpi"><div class="k">Активная тема</div><div class="v" id="activeTheme">-</div></div>
+        </div>
+      </article>
+
+      <section class="reports">
+        <article class="report">
+          <h3>Светлана <span id="pillSv" class="pill off">нет данных</span></h3>
+          <p id="metaSv" class="meta">После запуска появится персональный разбор.</p>
+          <pre id="textSv">Пока ничего нет.</pre>
+        </article>
+
+        <article class="report">
+          <h3>Константин <span id="pillKt" class="pill off">нет данных</span></h3>
+          <p id="metaKt" class="meta">После запуска появится персональный разбор.</p>
+          <pre id="textKt">Пока ничего нет.</pre>
+        </article>
+      </section>
+    </section>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    const BASE_URL = "https://n8n.gruz.app/webhook";
+    function baseUrl() {
+      return BASE_URL;
+    }
+
+    function normalizeCardText(value, fallback = "Нет текста отчета.") {
+      const raw = String(value || "").trim();
+      if (!raw) return fallback;
+      const mostlyQuestionMarks = (raw.match(/\?/g) || []).length > Math.max(10, raw.length * 0.35);
+      if (mostlyQuestionMarks) {
+        return "Текст отчета пришел в некорректной кодировке. Повторите запуск, если проблема сохранится — поправим кодировку на стороне источника.";
+      }
+      return raw;
+    }
+
+    function setStatus(text, mode = "") {
+      const el = $("status");
+      el.className = "status" + (mode ? " " + mode : "");
+      el.textContent = text;
+    }
+
+    function formatDate(value) {
+      if (!value) return "-";
+      const d = new Date(value);
+      if (Number.isNaN(d.getTime())) return value;
+      return d.toLocaleString("ru-RU");
+    }
+
+    async function api(path, method = "GET", body = null) {
+      const res = await fetch(baseUrl() + path, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: body ? JSON.stringify(body) : null
+      });
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(`${res.status}: ${txt}`);
+      }
+      return res.json();
+    }
+
+    function extractPayload(raw) {
+      if (Array.isArray(raw)) return raw[0] || {};
+      if (raw && Array.isArray(raw.value)) return raw.value[0] || {};
+      return raw || {};
+    }
+
+    function setManager(kind, data) {
+      const refs = kind === "sv"
+        ? { pill: "pillSv", meta: "metaSv", text: "textSv" }
+        : { pill: "pillKt", meta: "metaKt", text: "textKt" };
+
+      const noCalls = !!data.no_calls;
+      const calls = data.calls_count || 0;
+
+      const pill = $(refs.pill);
+      pill.className = "pill " + (noCalls ? "off" : "ok");
+      pill.textContent = noCalls ? "звонков нет" : `звонков: ${calls}`;
+
+      $(refs.meta).textContent = noCalls
+        ? "За период звонков не найдено."
+        : `Обработано звонков: ${calls}`;
+
+      $(refs.text).textContent = normalizeCardText(data.report_text);
+    }
+
+    function render(payload) {
+      const period = payload.period || {};
+      const theme = payload.weekly_theme || $("weeklyTheme").value.trim() || "-";
+
+      $("lastRun").textContent = formatDate(payload.generated_at);
+      $("period").textContent = `${period.date_from || "-"} .. ${period.date_to || "-"}`;
+      $("activeTheme").textContent = theme;
+
+      const managers = payload.managers || {};
+      setManager("sv", managers.Svetlana || { no_calls: true, report_text: "Нет данных по Светлане." });
+      setManager("kt", managers.Konstantin || { no_calls: true, report_text: "Нет данных по Константину." });
+    }
+
+    async function saveTheme() {
+      const theme = $("weeklyTheme").value.trim();
+      if (!theme) {
+        setStatus("Введите тему недели перед сохранением.", "err");
+        return;
+      }
+      try {
+        setStatus("Сохраняю тему...", "");
+        const data = await api("/sales-orchestrator-theme", "POST", { weekly_theme: theme });
+        $("activeTheme").textContent = data.weekly_theme || theme;
+        setStatus("Тема недели сохранена.", "ok");
+      } catch (e) {
+        setStatus("Ошибка сохранения: " + e.message, "err");
+      }
+    }
+
+    async function runAnalysis() {
+      const theme = $("weeklyTheme").value.trim();
+      if (!theme) {
+        setStatus("Введите тему недели перед запуском.", "err");
+        return;
+      }
+      try {
+        setStatus("Запускаю анализ. Это может занять 1-2 минуты...", "");
+        const data = await api("/sales-orchestrator-run", "POST", { weekly_theme: theme, source: "site" });
+        render(extractPayload(data));
+        setStatus("Анализ завершен. Карточки обновлены.", "ok");
+      } catch (e) {
+        setStatus("Ошибка запуска: " + e.message, "err");
+      }
+    }
+
+    async function refreshState() {
+      try {
+        setStatus("Обновляю состояние...", "");
+        const data = await api("/sales-orchestrator-state", "GET");
+        const payload = extractPayload(data);
+        if (payload.last_run) {
+          render(payload.last_run);
+          if (payload.weekly_theme) $("weeklyTheme").value = payload.weekly_theme;
+          setStatus("Состояние обновлено.", "ok");
+        } else {
+          setStatus("Состояние получено, запусков пока нет.", "");
+        }
+      } catch (e) {
+        setStatus("Ошибка чтения состояния: " + e.message, "err");
+      }
+    }
+
+    function clearScreen() {
+      $("lastRun").textContent = "-";
+      $("period").textContent = "-";
+      $("activeTheme").textContent = "-";
+
+      $("pillSv").className = "pill off";
+      $("pillKt").className = "pill off";
+      $("pillSv").textContent = "нет данных";
+      $("pillKt").textContent = "нет данных";
+
+      $("metaSv").textContent = "После запуска появится персональный разбор.";
+      $("metaKt").textContent = "После запуска появится персональный разбор.";
+      $("textSv").textContent = "Пока ничего нет.";
+      $("textKt").textContent = "Пока ничего нет.";
+
+      setStatus("Экран очищен.", "");
+    }
+
+    $("saveThemeBtn").addEventListener("click", saveTheme);
+    $("runBtn").addEventListener("click", runAnalysis);
+    $("refreshBtn").addEventListener("click", refreshState);
+    $("clearBtn").addEventListener("click", clearScreen);
+  </script>
+</body>
+</html>
