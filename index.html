@@ -443,6 +443,11 @@
       return raw || {};
     }
 
+    function resultPayload(payload) {
+      if (payload && payload.result) return payload.result;
+      return payload || {};
+    }
+
     function setManager(kind, data) {
       const refs = kind === "sv"
         ? { pill: "pillSv", meta: "metaSv", text: "textSv" }
@@ -463,6 +468,7 @@
     }
 
     function render(payload) {
+      payload = resultPayload(payload);
       const period = payload.period || {};
       const theme = payload.weekly_theme || $("weeklyTheme").value.trim() || "-";
 
@@ -473,6 +479,30 @@
       const managers = payload.managers || {};
       setManager("sv", managers.Svetlana || { no_calls: true, report_text: "Нет данных по Светлане." });
       setManager("kt", managers.Konstantin || { no_calls: true, report_text: "Нет данных по Константину." });
+    }
+
+    async function waitForRun(runId) {
+      const started = Date.now();
+      const timeoutMs = 12 * 60 * 1000;
+      while (Date.now() - started < timeoutMs) {
+        await new Promise((resolve) => setTimeout(resolve, 10000));
+        const state = extractPayload(await api("/sales-orchestrator-state", "GET"));
+        const run = state.last_run || {};
+        if (run.run_id !== runId) {
+          setStatus("Анализ запущен. Жду актуальный результат...", "");
+          continue;
+        }
+        if (run.status === "success" && run.result) {
+          render(run.result);
+          setStatus("Анализ завершен. Карточки обновлены.", "ok");
+          return;
+        }
+        if (run.status === "error") {
+          throw new Error(run.error || "Анализ завершился ошибкой");
+        }
+        setStatus("Анализ идет. Обычно это занимает несколько минут...", "");
+      }
+      throw new Error("Анализ еще идет. Нажмите «Обновить состояние» чуть позже.");
     }
 
     async function saveTheme() {
@@ -497,13 +527,23 @@
         setStatus("Введите тему недели перед запуском.", "err");
         return;
       }
+      const runId = `site_${Date.now()}_${Math.random().toString(16).slice(2)}`;
       try {
-        setStatus("Запускаю анализ. Это может занять 1-2 минуты...", "");
-        const data = await api("/sales-orchestrator-run", "POST", { weekly_theme: theme, source: "site" });
-        render(extractPayload(data));
-        setStatus("Анализ завершен. Карточки обновлены.", "ok");
+        setStatus("Запускаю анализ...", "");
+        $("runBtn").disabled = true;
+        const data = await api("/sales-orchestrator-run", "POST", { weekly_theme: theme, source: "site", run_id: runId });
+        const accepted = extractPayload(data);
+        if (accepted.accepted || accepted.run_id) {
+          setStatus("Анализ запущен. Жду результат...", "ok");
+          await waitForRun(accepted.run_id || runId);
+        } else {
+          render(accepted);
+          setStatus("Анализ завершен. Карточки обновлены.", "ok");
+        }
       } catch (e) {
         setStatus("Ошибка запуска: " + e.message, "err");
+      } finally {
+        $("runBtn").disabled = false;
       }
     }
 
@@ -513,9 +553,11 @@
         const data = await api("/sales-orchestrator-state", "GET");
         const payload = extractPayload(data);
         if (payload.last_run) {
-          render(payload.last_run);
+          if (payload.last_run.status === "success" && payload.last_run.result) {
+            render(payload.last_run.result);
+          }
           if (payload.weekly_theme) $("weeklyTheme").value = payload.weekly_theme;
-          setStatus("Состояние обновлено.", "ok");
+          setStatus(payload.last_run.status === "running" ? "Анализ еще идет." : "Состояние обновлено.", payload.last_run.status === "running" ? "" : "ok");
         } else {
           setStatus("Состояние получено, запусков пока нет.", "");
         }
