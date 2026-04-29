@@ -243,6 +243,135 @@
       box-shadow: 0 12px 26px rgba(0, 0, 0, .28);
     }
 
+    button:disabled {
+      cursor: not-allowed;
+      filter: saturate(.7) brightness(.78);
+      opacity: .76;
+      transform: none;
+    }
+
+    .btn-success.is-loading {
+      position: relative;
+      overflow: hidden;
+      color: #061918;
+      animation: buttonPulse 1.45s ease-in-out infinite;
+    }
+
+    .btn-success.is-loading::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(110deg, transparent 0%, rgba(255,255,255,.25) 44%, transparent 72%);
+      transform: translateX(-120%);
+      animation: buttonSweep 1.8s ease-in-out infinite;
+    }
+
+    @keyframes buttonPulse {
+      0%, 100% { box-shadow: 0 10px 24px rgba(32, 217, 177, .18); }
+      50% { box-shadow: 0 0 0 3px rgba(47, 226, 255, .12), 0 16px 34px rgba(32, 217, 177, .32); }
+    }
+
+    @keyframes buttonSweep {
+      0% { transform: translateX(-120%); }
+      58%, 100% { transform: translateX(120%); }
+    }
+
+    .analysis-progress {
+      display: grid;
+      grid-template-columns: 86px 1fr;
+      gap: 14px;
+      align-items: center;
+      margin: 14px 0;
+      padding: 13px;
+      border-radius: 18px;
+      border: 1px solid rgba(47, 226, 255, .28);
+      background:
+        radial-gradient(160px 90px at 0% 10%, rgba(47, 226, 255, .14), transparent 70%),
+        linear-gradient(135deg, rgba(10, 20, 40, .88), rgba(11, 18, 33, .76));
+      box-shadow: inset 0 0 0 1px rgba(167,196,245,.05), 0 18px 34px rgba(0,0,0,.22);
+    }
+
+    .analysis-progress.is-idle {
+      display: none;
+    }
+
+    .progress-ring {
+      --p: 0;
+      position: relative;
+      width: 76px;
+      height: 76px;
+      display: grid;
+      place-items: center;
+    }
+
+    .progress-ring svg {
+      width: 76px;
+      height: 76px;
+      transform: rotate(-90deg);
+      overflow: visible;
+    }
+
+    .progress-track,
+    .progress-value {
+      fill: none;
+      stroke-width: 8;
+    }
+
+    .progress-track { stroke: rgba(122, 152, 207, .18); }
+
+    .progress-value {
+      stroke: var(--cyan);
+      stroke-linecap: round;
+      stroke-dasharray: 100;
+      stroke-dashoffset: calc(100 - var(--p));
+      filter: drop-shadow(0 0 10px rgba(47, 226, 255, .48));
+      transition: stroke-dashoffset .55s ease, stroke .25s ease;
+    }
+
+    .analysis-progress.is-running .progress-value,
+    .analysis-progress.is-starting .progress-value {
+      animation: ringBreath 1.6s ease-in-out infinite;
+    }
+
+    .analysis-progress.is-waiting .progress-value {
+      stroke-dasharray: 24 76;
+      animation: ringSpin 1.3s linear infinite;
+    }
+
+    .analysis-progress.is-done .progress-value { stroke: var(--teal); }
+    .analysis-progress.is-error .progress-value { stroke: var(--red); }
+
+    .progress-percent {
+      position: absolute;
+      font-family: Orbitron, sans-serif;
+      font-size: 18px;
+      color: #f1f7ff;
+      text-shadow: 0 0 18px rgba(47, 226, 255, .35);
+    }
+
+    .progress-copy b {
+      display: block;
+      color: #e9f4ff;
+      font-size: 15px;
+      margin-bottom: 4px;
+    }
+
+    .progress-copy span {
+      display: block;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.42;
+    }
+
+    @keyframes ringBreath {
+      0%, 100% { filter: drop-shadow(0 0 9px rgba(47, 226, 255, .34)); }
+      50% { filter: drop-shadow(0 0 18px rgba(47, 226, 255, .7)); }
+    }
+
+    @keyframes ringSpin {
+      to { stroke-dashoffset: -100; }
+    }
+
     .status {
       border-radius: 12px;
       border: 1px solid rgba(110, 135, 183, .34);
@@ -406,12 +535,146 @@
 
     .note { margin: 2px 0 0; color: var(--muted); font-size: 12px; line-height: 1.45; }
 
+    .transcript-stage {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin: 0 0 2px;
+    }
+
+    .transcript-feed {
+      display: grid;
+      gap: 10px;
+      align-content: start;
+      pointer-events: none;
+    }
+
+    .feed-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 0 2px;
+      color: #dce8ff;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    .feed-head span:last-child {
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: .06em;
+    }
+
+    .feed-card {
+      --accent: var(--cyan);
+      position: relative;
+      min-height: 92px;
+      padding: 12px;
+      border-radius: 18px;
+      border: 1px solid color-mix(in srgb, var(--accent) 34%, rgba(122, 152, 207, .22));
+      background:
+        radial-gradient(160px 70px at 18% 0%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 70%),
+        linear-gradient(160deg, rgba(12, 22, 42, .82), rgba(8, 14, 28, .68));
+      box-shadow: 0 18px 36px rgba(0,0,0,.26), inset 0 0 0 1px rgba(255,255,255,.04);
+      backdrop-filter: blur(10px);
+      animation: feedIn .55s ease both;
+      animation-delay: var(--delay, 0ms);
+      overflow: hidden;
+    }
+
+    .feed-card::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 3px;
+      background: linear-gradient(180deg, transparent, var(--accent), transparent);
+      opacity: .8;
+    }
+
+    .feed-card.client { --accent: var(--teal); }
+    .feed-card.risk { --accent: var(--warn); }
+    .feed-card.error { --accent: var(--red); }
+    .feed-card.system { --accent: var(--blue); }
+
+    .feed-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .speaker-badge {
+      color: #06151a;
+      background: var(--accent);
+      border-radius: 999px;
+      padding: 4px 8px;
+      font-size: 10px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 46%, transparent);
+    }
+
+    .feed-text {
+      color: #d9e7ff;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .feed-empty {
+      border-style: dashed;
+      color: var(--muted);
+    }
+
+    @keyframes feedIn {
+      from { opacity: 0; transform: translateY(12px) scale(.98); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
     @media (min-width: 860px) {
       .app { padding: 24px 18px 48px; }
       .shell { grid-template-columns: 1.02fr 1fr; align-items: start; }
       .actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .overview { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .reports { grid-column: 1 / -1; grid-template-columns: 1fr 1fr; }
+    }
+
+    @media (min-width: 1720px) {
+      .transcript-stage {
+        display: contents;
+      }
+
+      .transcript-feed {
+        position: fixed;
+        top: 118px;
+        width: 278px;
+        max-height: calc(100vh - 148px);
+        overflow: hidden;
+        z-index: 0;
+        opacity: .96;
+      }
+
+      .transcript-feed-left {
+        left: max(24px, calc((100vw - 1140px) / 2 - 322px));
+      }
+
+      .transcript-feed-right {
+        right: max(24px, calc((100vw - 1140px) / 2 - 322px));
+      }
+    }
+
+    @media (max-width: 720px) {
+      .transcript-stage { grid-template-columns: 1fr; }
+      .analysis-progress { grid-template-columns: 72px 1fr; }
+      .progress-ring, .progress-ring svg { width: 66px; height: 66px; }
+      .progress-percent { font-size: 15px; }
     }
   </style>
 </head>
@@ -453,6 +716,20 @@
           <button class="btn-warning" id="clearBtn">Очистить экран</button>
         </div>
 
+        <div id="analysisProgress" class="analysis-progress is-idle">
+          <div id="progressRing" class="progress-ring" style="--p: 0">
+            <svg viewBox="0 0 120 120" aria-hidden="true">
+              <circle class="progress-track" cx="60" cy="60" r="50" pathLength="100"></circle>
+              <circle class="progress-value" cx="60" cy="60" r="50" pathLength="100"></circle>
+            </svg>
+            <div id="progressPercent" class="progress-percent">0%</div>
+          </div>
+          <div class="progress-copy">
+            <b id="progressTitle">Готово к запуску</b>
+            <span id="progressMeta">Нажмите «Запустить анализ», чтобы увидеть ход обработки.</span>
+          </div>
+        </div>
+
         <div id="status" class="status">Готово к работе.</div>
 
         <div class="overview">
@@ -464,6 +741,11 @@
           <div class="kpi"><div class="k">Осталось в очереди</div><div class="v" id="remainingCalls">-</div></div>
         </div>
       </article>
+
+      <section class="transcript-stage" aria-label="Живая лента транскрибации">
+        <aside id="leftTranscriptFeed" class="transcript-feed transcript-feed-left"></aside>
+        <aside id="rightTranscriptFeed" class="transcript-feed transcript-feed-right"></aside>
+      </section>
 
       <section class="reports">
         <article class="report">
@@ -507,6 +789,51 @@
       const el = $("status");
       el.className = "status" + (mode ? " " + mode : "");
       el.textContent = text;
+    }
+
+    function setRunLoading(isLoading) {
+      const btn = $("runBtn");
+      btn.disabled = !!isLoading;
+      btn.classList.toggle("is-loading", !!isLoading);
+      btn.textContent = isLoading ? "Анализ идет..." : "Запустить анализ";
+    }
+
+    function stageLabel(status, progress = {}) {
+      const total = Number(progress.total_calls || 0);
+      const analyzed = Number(progress.analyzed_calls ?? progress.processed_calls ?? 0);
+      if (status === "error" || status === "failed") return "Ошибка анализа";
+      if (status === "success" || status === "done" || status === "partial") return "Анализ завершен";
+      if (total && analyzed) return "AI разбирает фразы";
+      if (total) return "Транскрибируем звонки";
+      if (status === "starting") return "Запускаю пайплайн";
+      return "Ждем первые данные";
+    }
+
+    function updateProgressRing(progress = {}, status = "idle") {
+      const panel = $("analysisProgress");
+      const ring = $("progressRing");
+      const percentEl = $("progressPercent");
+      const titleEl = $("progressTitle");
+      const metaEl = $("progressMeta");
+      const total = Number(progress.total_calls || 0);
+      const analyzed = Number(progress.analyzed_calls ?? progress.processed_calls ?? 0);
+      const remaining = Number(progress.remaining_analysis_calls ?? progress.remaining_calls ?? 0);
+      const failed = Number(progress.failed_calls || 0);
+      const terminal = ["success", "done", "partial"].includes(status);
+      const error = ["error", "failed"].includes(status);
+      const waiting = !total && !terminal && !error && status !== "idle";
+      const percent = total ? Math.max(0, Math.min(100, Math.round((analyzed / total) * 100))) : (terminal ? 100 : 0);
+
+      panel.className = "analysis-progress";
+      panel.classList.add(error ? "is-error" : terminal ? "is-done" : waiting ? "is-waiting" : status === "idle" ? "is-idle" : status === "starting" ? "is-starting" : "is-running");
+      ring.style.setProperty("--p", String(percent));
+      percentEl.textContent = waiting ? "..." : `${percent}%`;
+      titleEl.textContent = stageLabel(status, progress);
+      metaEl.textContent = total
+        ? `Глубоко разобрано ${analyzed} из ${total}. В очереди ${remaining}. Ошибок: ${failed}.`
+        : waiting
+          ? "n8n принял запуск, ждем список звонков и первые транскрипты."
+          : "Нажмите «Запустить анализ», чтобы увидеть ход обработки.";
     }
 
     function formatDate(value) {
@@ -557,6 +884,96 @@
     function compactText(value, max = 190) {
       const text = String(value || "").replace(/\s+/g, " " ).trim();
       return text.length > max ? text.slice(0, max - 1).trim() + "…" : text;
+    }
+
+    function speakerTitle(speaker) {
+      return ({ manager: "Менеджер", client: "Клиент", unknown: "Неясно", system: "Статус" })[speaker] || "Фраза";
+    }
+
+    function isRiskPhrase(text) {
+      return /цен|дорог|плат|ати|хуже|неудоб|стоим|зачем|вопрос|не понял|подума/i.test(String(text || ""));
+    }
+
+    function extractLiveTranscriptSnippets(payload) {
+      const result = resultPayload(payload || {});
+      const managers = result.managers || {};
+      const snippets = [];
+      Object.entries(managers).forEach(([manager, data]) => {
+        const analysis = data?.analysis || data?.analysis_json || {};
+        const dialogue = Array.isArray(analysis.dialogue) ? analysis.dialogue : [];
+        dialogue.forEach((line, index) => {
+          const text = compactText(line?.text, 165);
+          if (!text) return;
+          snippets.push({
+            manager,
+            speaker: line.speaker || "unknown",
+            text,
+            callIndex: line.call_index || index + 1,
+            confidence: Number(line.confidence ?? 0),
+            risk: isRiskPhrase(text),
+          });
+        });
+      });
+      return snippets;
+    }
+
+    function placeholderFeed(mode, status = "idle") {
+      const running = !["idle", "success", "done", "partial", "error", "failed"].includes(status);
+      const errored = ["error", "failed"].includes(status);
+      const title = mode === "left" ? "Менеджерские фразы" : "Возражения клиентов";
+      const subtitle = running ? "live status" : errored ? "нужна проверка" : "ожидаем запуск";
+      const cards = errored
+        ? [{ speaker: "system", text: "Анализ остановился с ошибкой. Повторите запуск после проверки статуса.", cls: "error" }]
+        : running
+          ? [
+              { speaker: "system", text: "Забираем звонки из Телфина и готовим очередь.", cls: "system" },
+              { speaker: "system", text: "Whisper транскрибирует записи. Реальные фразы появятся после разбора.", cls: "system" },
+              { speaker: "system", text: "AI выделит роли, ошибки и полезные фразы без выдуманных цитат.", cls: "system" },
+            ]
+          : [{ speaker: "system", text: "После анализа здесь появятся реальные фрагменты транскрибации.", cls: "system feed-empty" }];
+      return { title, subtitle, cards };
+    }
+
+    function renderTranscriptFeed(snippets = [], mode = "left", status = "idle") {
+      const target = $(mode === "left" ? "leftTranscriptFeed" : "rightTranscriptFeed");
+      const heading = mode === "left" ? "Менеджерские фразы" : "Возражения клиентов";
+      let cards = [];
+      if (snippets.length) {
+        cards = snippets
+          .filter((item) => mode === "left" ? item.speaker === "manager" : item.speaker !== "manager" || item.risk)
+          .sort((a, b) => mode === "right" ? Number(b.risk) - Number(a.risk) : 0)
+          .slice(0, 5)
+          .map((item) => ({
+            ...item,
+            cls: item.risk ? "risk" : item.speaker === "client" ? "client" : item.speaker === "manager" ? "manager" : "system",
+          }));
+      }
+      if (!cards.length) {
+        const fallback = placeholderFeed(mode, status);
+        target.innerHTML = `<div class="feed-head"><span>${fallback.title}</span><span>${fallback.subtitle}</span></div>` + fallback.cards.map((card, i) => feedCard(card, i)).join("");
+        return;
+      }
+      target.innerHTML = `<div class="feed-head"><span>${heading}</span><span>real transcript</span></div>` + cards.map((card, i) => feedCard(card, i)).join("");
+    }
+
+    function feedCard(card, index) {
+      const delay = Math.min(index * 140, 700);
+      const manager = card.manager ? ` · ${card.manager}` : "";
+      const confidence = card.confidence ? ` · ${Math.round(card.confidence * 100)}%` : "";
+      return `
+        <div class="feed-card ${escapeHtml(card.cls || "system")}" style="--delay:${delay}ms">
+          <div class="feed-meta">
+            <span class="speaker-badge">${escapeHtml(speakerTitle(card.speaker))}</span>
+            <span>${escapeHtml(`Звонок ${card.callIndex || "-"}${manager}${confidence}`)}</span>
+          </div>
+          <div class="feed-text">${escapeHtml(card.text)}</div>
+        </div>`;
+    }
+
+    function updateTranscriptFeeds(payload, status = "idle") {
+      const snippets = extractLiveTranscriptSnippets(payload || {});
+      renderTranscriptFeed(snippets, "left", status);
+      renderTranscriptFeed(snippets, "right", status);
     }
 
     function renderList(items, mapper, empty = "Пока нет данных.") {
@@ -629,6 +1046,7 @@
     function render(payload) {
       const rawPayload = payload || {};
       const progress = rawPayload.progress || {};
+      const runStatus = rawPayload.status || (rawPayload.result ? "done" : "idle");
       payload = resultPayload(rawPayload);
       const period = payload.period || rawPayload.period || {};
       const theme = payload.weekly_theme || rawPayload.weekly_theme || $("weeklyTheme").value.trim() || "-";
@@ -639,6 +1057,8 @@
       $("foundCalls").textContent = progress.total_calls ?? "-";
       $("analyzedCalls").textContent = progress.analyzed_calls ?? progress.processed_calls ?? "-";
       $("remainingCalls").textContent = progress.remaining_analysis_calls ?? progress.remaining_calls ?? "-";
+      updateProgressRing(progress, runStatus);
+      updateTranscriptFeeds(rawPayload, runStatus);
 
       const managers = payload.managers || {};
       setManager("sv", managers.Svetlana || { no_calls: true, report_text: "Нет данных по Светлане." });
@@ -656,6 +1076,8 @@
           setStatus("Анализ запущен. Жду актуальный результат...", "");
           continue;
         }
+        updateProgressRing(run.progress || {}, run.status || "running");
+        updateTranscriptFeeds(run, run.status || "running");
         if ((run.status === "success" || run.status === "done" || run.status === "partial") && run.result) {
           render(run);
           const p = run.progress || {};
@@ -670,6 +1092,8 @@
           throw new Error(run.error || "Анализ завершился ошибкой");
         }
         const p = run.progress || {};
+        updateProgressRing(p, run.status || "running");
+        updateTranscriptFeeds(run, run.status || "running");
         const found = p.total_calls ?? 0;
         const analyzed = p.analyzed_calls ?? p.processed_calls ?? 0;
         const left = p.remaining_analysis_calls ?? p.remaining_calls ?? 0;
@@ -702,10 +1126,14 @@
       }
       const runId = `site_${Date.now()}_${Math.random().toString(16).slice(2)}`;
       try {
+        setRunLoading(true);
+        updateProgressRing({}, "starting");
+        updateTranscriptFeeds({}, "starting");
         setStatus("Запускаю анализ...", "");
-        $("runBtn").disabled = true;
         const data = await api("/sales-orchestrator-run", "POST", { weekly_theme: theme, source: "site", run_id: runId });
         const accepted = extractPayload(data);
+        updateProgressRing(accepted.progress || {}, accepted.status || "running");
+        updateTranscriptFeeds(accepted, accepted.status || "running");
         if (accepted.accepted || accepted.run_id) {
           setStatus("Анализ запущен. Жду результат...", "ok");
           await waitForRun(accepted.run_id || runId);
@@ -714,9 +1142,11 @@
           setStatus("Анализ завершен. Карточки обновлены.", "ok");
         }
       } catch (e) {
+        updateProgressRing({}, "error");
+        updateTranscriptFeeds({}, "error");
         setStatus("Ошибка запуска: " + e.message, "err");
       } finally {
-        $("runBtn").disabled = false;
+        setRunLoading(false);
       }
     }
 
@@ -726,6 +1156,8 @@
         const data = await api("/sales-orchestrator-state", "GET");
         const payload = extractPayload(data);
         if (payload.last_run) {
+          updateProgressRing(payload.last_run.progress || {}, payload.last_run.status || "idle");
+          updateTranscriptFeeds(payload.last_run, payload.last_run.status || "idle");
           if ((payload.last_run.status === "success" || payload.last_run.status === "done" || payload.last_run.status === "partial") && payload.last_run.result) {
             render(payload.last_run);
           }
@@ -760,9 +1192,15 @@
       $("scoreKt").innerHTML = "";
       $("insightsSv").innerHTML = "";
       $("insightsKt").innerHTML = "";
+      setRunLoading(false);
+      updateProgressRing({}, "idle");
+      updateTranscriptFeeds({}, "idle");
 
       setStatus("Экран очищен.", "");
     }
+
+    updateProgressRing({}, "idle");
+    updateTranscriptFeeds({}, "idle");
 
     $("saveThemeBtn").addEventListener("click", saveTheme);
     $("runBtn").addEventListener("click", runAnalysis);
