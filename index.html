@@ -834,7 +834,8 @@
       .actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .overview { grid-template-columns: repeat(3, minmax(0, 1fr)); }
       .customer-insights { grid-column: 1 / -1; }
-      .customer-layout { grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr); }
+      .customer-layout { grid-template-columns: minmax(0, .92fr) minmax(0, 1.08fr); }
+
       .reports { grid-column: 1 / -1; grid-template-columns: 1fr 1fr; }
     }
 
@@ -1010,18 +1011,35 @@
       btn.textContent = isLoading ? "Анализ идет..." : "Запустить анализ";
     }
 
-    function stageLabel(status, progress = {}) {
+    function pipelineCounts(progress = {}, context = {}) {
+      const events = Array.isArray(context.events) ? context.events : [];
+      const counts = { downloading: 0, transcribing: 0, analyzing: 0 };
+      events.forEach((event) => {
+        const message = String(event?.message || "");
+        const match = message.match(/batch status -> ([a-z_]+), updated=(\d+)/i);
+        if (!match) return;
+        const key = match[1];
+        const value = Number(match[2] || 0);
+        if (key in counts) counts[key] = Math.max(counts[key], value);
+      });
+      counts.analyzing = Math.max(counts.analyzing, Number(progress.processed_calls || 0), Number(progress.analyzed_calls || 0));
+      return counts;
+    }
+
+    function stageLabel(status, progress = {}, context = {}) {
       const total = Number(progress.total_calls || 0);
       const analyzed = Number(progress.analyzed_calls ?? progress.processed_calls ?? 0);
+      const counts = pipelineCounts(progress, context);
       if (status === "error" || status === "failed") return "Ошибка анализа";
       if (status === "success" || status === "done" || status === "partial") return "Анализ завершен";
       if (total && analyzed) return "AI разбирает фразы";
-      if (total) return "Транскрибируем звонки";
+      if (counts.transcribing > 0) return "Whisper транскрибирует звонки";
+      if (counts.downloading > 0 || total) return "Готовим записи к транскрибации";
       if (status === "starting") return "Запускаю пайплайн";
       return "Ждем первые данные";
     }
 
-    function updateProgressRing(progress = {}, status = "idle") {
+    function updateProgressRing(progress = {}, status = "idle", context = {}) {
       const panel = $("analysisProgress");
       const ring = $("progressRing");
       const percentEl = $("progressPercent");
@@ -1031,21 +1049,25 @@
       const analyzed = Number(progress.analyzed_calls ?? progress.processed_calls ?? 0);
       const remaining = Number(progress.remaining_analysis_calls ?? progress.remaining_calls ?? 0);
       const failed = Number(progress.failed_calls || 0);
+      const counts = pipelineCounts(progress, context);
       const terminal = ["success", "done", "partial"].includes(status);
       const error = ["error", "failed"].includes(status);
       const active = !terminal && !error && status !== "idle";
       const waiting = active && !total;
       const transcribing = active && total > 0 && analyzed === 0;
-      const percent = total ? Math.max(0, Math.min(100, Math.round((analyzed / total) * 100))) : (terminal ? 100 : 0);
+      const truePercent = total ? Math.max(0, Math.min(100, Math.round((analyzed / total) * 100))) : (terminal ? 100 : 0);
+      const stageDone = Math.max(counts.transcribing, counts.downloading ? Math.min(total, Math.round(counts.downloading * .35)) : 0);
+      const stagePercent = total ? Math.max(6, Math.min(72, Math.round((stageDone / total) * 72))) : 0;
+      const displayPercent = transcribing ? Math.max(stagePercent, counts.transcribing ? 18 : 8) : truePercent;
 
       panel.className = "analysis-progress";
-      panel.classList.add(error ? "is-error" : terminal ? "is-done" : (waiting || transcribing) ? "is-waiting" : status === "idle" ? "is-idle" : status === "starting" ? "is-starting" : "is-running");
-      ring.style.setProperty("--p", String(percent));
-      percentEl.textContent = (waiting || transcribing) ? "..." : `${percent}%`;
-      titleEl.textContent = stageLabel(status, progress);
+      panel.classList.add(error ? "is-error" : terminal ? "is-done" : waiting ? "is-waiting" : status === "idle" ? "is-idle" : status === "starting" ? "is-starting" : "is-running");
+      ring.style.setProperty("--p", String(displayPercent));
+      percentEl.textContent = waiting ? "..." : `${displayPercent}%`;
+      titleEl.textContent = stageLabel(status, progress, context);
       metaEl.textContent = total
         ? transcribing
-          ? `Найдено ${total} звонков. Сейчас идет транскрибация, процент появится после первых AI-разборов. В очереди ${remaining}. Ошибок: ${failed}.`
+          ? `Найдено ${total}. В транскрибации: ${Math.min(counts.transcribing || 0, total)}. Подготовлено к скачиванию: ${Math.min(counts.downloading || 0, total)}. AI-разбор начнется после первых транскриптов. Ошибок: ${failed}.`
           : `Глубоко разобрано ${analyzed} из ${total}. В очереди ${remaining}. Ошибок: ${failed}.`
         : waiting
           ? "n8n принял запуск, ждем список звонков и первые транскрипты."
@@ -1338,7 +1360,7 @@
       $("foundCalls").textContent = progress.total_calls ?? "-";
       $("analyzedCalls").textContent = progress.analyzed_calls ?? progress.processed_calls ?? "-";
       $("remainingCalls").textContent = progress.remaining_analysis_calls ?? progress.remaining_calls ?? "-";
-      updateProgressRing(progress, runStatus);
+      updateProgressRing(progress, runStatus, rawPayload);
       updateTranscriptFeeds(rawPayload, runStatus);
       renderCustomerInsights(payload.customer_insights || rawPayload.customer_insights || null);
 
@@ -1358,7 +1380,7 @@
           setStatus("Анализ запущен. Жду актуальный результат...", "");
           continue;
         }
-        updateProgressRing(run.progress || {}, run.status || "running");
+        updateProgressRing(run.progress || {}, run.status || "running", run);
         updateTranscriptFeeds(run, run.status || "running");
         if ((run.status === "success" || run.status === "done" || run.status === "partial") && run.result) {
           render(run);
@@ -1379,7 +1401,10 @@
         const found = p.total_calls ?? 0;
         const analyzed = p.analyzed_calls ?? p.processed_calls ?? 0;
         const left = p.remaining_analysis_calls ?? p.remaining_calls ?? 0;
-        setStatus(`Анализ идет. Найдено: ${found}, глубоко разобрано: ${analyzed}, осталось: ${left}.`, "");
+        const counts = pipelineCounts(p, run);
+        const transcribing = Math.min(counts.transcribing || 0, found || 0);
+        const stageText = analyzed ? `глубоко разобрано: ${analyzed}` : transcribing ? `в транскрибации: ${transcribing}` : `подготовка записей`;
+        setStatus(`Анализ идет. Найдено: ${found}, ${stageText}, осталось до AI-разбора: ${left}.`, "");
       }
       throw new Error("Анализ еще идет. Нажмите «Обновить состояние» чуть позже.");
     }
@@ -1415,7 +1440,7 @@
         setStatus("Запускаю анализ...", "");
         const data = await api("/sales-orchestrator-run", "POST", { weekly_theme: theme, source: "site", run_id: runId });
         const accepted = extractPayload(data);
-        updateProgressRing(accepted.progress || {}, accepted.status || "running");
+        updateProgressRing(accepted.progress || {}, accepted.status || "running", accepted);
         updateTranscriptFeeds(accepted, accepted.status || "running");
         if (accepted.accepted || accepted.run_id) {
           setStatus("Анализ запущен. Жду результат...", "ok");
@@ -1439,7 +1464,7 @@
         const data = await api("/sales-orchestrator-state", "GET");
         const payload = extractPayload(data);
         if (payload.last_run) {
-          updateProgressRing(payload.last_run.progress || {}, payload.last_run.status || "idle");
+          updateProgressRing(payload.last_run.progress || {}, payload.last_run.status || "idle", payload.last_run);
           updateTranscriptFeeds(payload.last_run, payload.last_run.status || "idle");
           if (payload.last_run.result) renderCustomerInsights(payload.last_run.result.customer_insights || null);
           if ((payload.last_run.status === "success" || payload.last_run.status === "done" || payload.last_run.status === "partial") && payload.last_run.result) {
