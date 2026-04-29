@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
@@ -309,6 +309,91 @@
     .pill.ok { color: #90f8d9; border-color: rgba(32, 217, 177, .54); background: rgba(16, 65, 52, .56); }
     .pill.off { color: #ffd49a; border-color: rgba(255, 182, 92, .55); background: rgba(70, 47, 16, .58); }
 
+    .score-row {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin: 10px 0 12px;
+    }
+
+    .score-card {
+      border: 1px solid rgba(47, 226, 255, .22);
+      border-radius: 14px;
+      padding: 10px;
+      background:
+        radial-gradient(120px 70px at 100% 0%, rgba(47, 226, 255, .13), transparent 68%),
+        rgba(8, 15, 30, .72);
+    }
+
+    .score-card .k {
+      color: #8ea3c8;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .score-card .v {
+      font-family: Orbitron, sans-serif;
+      font-size: 24px;
+      color: #e9f4ff;
+      text-shadow: 0 0 18px rgba(47, 226, 255, .24);
+    }
+
+    .insights {
+      display: grid;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .insight-block {
+      border: 1px solid rgba(112, 140, 192, .24);
+      border-radius: 14px;
+      padding: 11px;
+      background: rgba(9, 16, 31, .58);
+    }
+
+    .insight-block h4 {
+      margin: 0 0 8px;
+      color: #dce8ff;
+      font-size: 13px;
+      letter-spacing: .03em;
+      text-transform: uppercase;
+    }
+
+    .insight-block ul {
+      margin: 0;
+      padding-left: 18px;
+      display: grid;
+      gap: 7px;
+      color: #c8d8f3;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+
+    .dialogue-list {
+      display: grid;
+      gap: 7px;
+    }
+
+    .dialogue-line {
+      display: grid;
+      grid-template-columns: 86px 1fr;
+      gap: 8px;
+      color: #c8d8f3;
+      font-size: 13px;
+      line-height: 1.42;
+    }
+
+    .speaker {
+      color: #8ef1d6;
+      font-weight: 800;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: .04em;
+    }
+
     pre {
       margin: 0;
       white-space: pre-wrap;
@@ -374,6 +459,9 @@
           <div class="kpi"><div class="k">Последний запуск</div><div class="v" id="lastRun">-</div></div>
           <div class="kpi"><div class="k">Период анализа</div><div class="v" id="period">-</div></div>
           <div class="kpi"><div class="k">Активная тема</div><div class="v" id="activeTheme">-</div></div>
+          <div class="kpi"><div class="k">Найдено звонков</div><div class="v" id="foundCalls">-</div></div>
+          <div class="kpi"><div class="k">Глубоко разобрано</div><div class="v" id="analyzedCalls">-</div></div>
+          <div class="kpi"><div class="k">Осталось в очереди</div><div class="v" id="remainingCalls">-</div></div>
         </div>
       </article>
 
@@ -381,13 +469,17 @@
         <article class="report">
           <h3>Светлана <span id="pillSv" class="pill off">нет данных</span></h3>
           <p id="metaSv" class="meta">После запуска появится персональный разбор.</p>
+          <div id="scoreSv" class="score-row"></div>
           <pre id="textSv">Пока ничего нет.</pre>
+          <div id="insightsSv" class="insights"></div>
         </article>
 
         <article class="report">
           <h3>Константин <span id="pillKt" class="pill off">нет данных</span></h3>
           <p id="metaKt" class="meta">После запуска появится персональный разбор.</p>
+          <div id="scoreKt" class="score-row"></div>
           <pre id="textKt">Пока ничего нет.</pre>
+          <div id="insightsKt" class="insights"></div>
         </article>
       </section>
     </section>
@@ -448,13 +540,75 @@
       return payload || {};
     }
 
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('\"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function scoreValue(value) {
+      const n = Number(value);
+      return Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : 0;
+    }
+
+    function compactText(value, max = 190) {
+      const text = String(value || "").replace(/\s+/g, " " ).trim();
+      return text.length > max ? text.slice(0, max - 1).trim() + "…" : text;
+    }
+
+    function renderList(items, mapper, empty = "Пока нет данных.") {
+      const list = Array.isArray(items) ? items.filter(Boolean).slice(0, 5) : [];
+      if (!list.length) return `<ul><li>${escapeHtml(empty)}</li></ul>`;
+      return `<ul>${list.map((item) => `<li>${escapeHtml(mapper(item))}</li>`).join("")}</ul>`;
+    }
+
+    function renderDialogue(dialogue) {
+      const lines = Array.isArray(dialogue) ? dialogue.slice(0, 6) : [];
+      if (!lines.length) return "";
+      const label = { manager: "Менеджер", client: "Клиент", unknown: "Неясно" };
+      return `
+        <div class="insight-block">
+          <h4>Фрагменты диалога</h4>
+          <div class="dialogue-list">
+            ${lines.map((line) => `
+              <div class="dialogue-line">
+                <span class="speaker">${escapeHtml(label[line.speaker] || "Неясно")}</span>
+                <span>${escapeHtml(compactText(line.text, 170))}</span>
+              </div>
+            `).join("")}
+          </div>
+        </div>`;
+    }
+
+    function renderInsights(data) {
+      const analysis = data.analysis || data.analysis_json || {};
+      if (!analysis || !Object.keys(analysis).length) return "";
+      const recommendations = renderList(analysis.recommendations, (x) => `${x.priority ? `[${x.priority}] ` : ""}${x.action || ""}${x.example_phrase ? ` — ${x.example_phrase}` : ""}`);
+      const mistakes = renderList(analysis.mistakes, (x) => `${x.type ? `${x.type}: ` : ""}${x.evidence || x.fix || ""}${x.fix ? ` Исправить: ${x.fix}` : ""}`);
+      const phrases = renderList(analysis.good_phrases, (x) => `${x.phrase || ""}${x.why_it_works ? ` — ${x.why_it_works}` : ""}`);
+      const plan = renderList(analysis.next_shift_plan, (x) => x);
+      return `
+        <div class="insight-block"><h4>Что улучшить в первую очередь</h4>${recommendations}</div>
+        <div class="insight-block"><h4>Ошибки и риск для продажи</h4>${mistakes}</div>
+        <div class="insight-block"><h4>Сильные фразы</h4>${phrases}</div>
+        <div class="insight-block"><h4>План на следующую смену</h4>${plan}</div>
+        ${renderDialogue(analysis.dialogue)}
+      `;
+    }
+
     function setManager(kind, data) {
       const refs = kind === "sv"
-        ? { pill: "pillSv", meta: "metaSv", text: "textSv" }
-        : { pill: "pillKt", meta: "metaKt", text: "textKt" };
+        ? { pill: "pillSv", meta: "metaSv", text: "textSv", score: "scoreSv", insights: "insightsSv" }
+        : { pill: "pillKt", meta: "metaKt", text: "textKt", score: "scoreKt", insights: "insightsKt" };
 
       const noCalls = !!data.no_calls;
       const calls = data.calls_count || 0;
+      const analysis = data.analysis || data.analysis_json || {};
+      const managerScore = scoreValue(data.manager_score ?? analysis.manager_score);
+      const themeScore = scoreValue(data.weekly_theme_match_score ?? analysis.weekly_theme_match?.score);
 
       const pill = $(refs.pill);
       pill.className = "pill " + (noCalls ? "off" : "ok");
@@ -462,19 +616,29 @@
 
       $(refs.meta).textContent = noCalls
         ? "За период звонков не найдено."
-        : `Обработано звонков: ${calls}`;
+        : `Обработано звонков: ${calls}. AI JSON: ${data.ai_json_valid === false ? "резервный режим" : "валидный"}.`;
 
-      $(refs.text).textContent = normalizeCardText(data.report_text);
+      $(refs.score).innerHTML = `
+        <div class="score-card"><div class="k">Оценка менеджера</div><div class="v">${managerScore}</div></div>
+        <div class="score-card"><div class="k">Тема недели</div><div class="v">${themeScore}</div></div>
+      `;
+      $(refs.text).textContent = normalizeCardText(data.report_text || analysis.report_text);
+      $(refs.insights).innerHTML = renderInsights(data);
     }
 
     function render(payload) {
-      payload = resultPayload(payload);
-      const period = payload.period || {};
-      const theme = payload.weekly_theme || $("weeklyTheme").value.trim() || "-";
+      const rawPayload = payload || {};
+      const progress = rawPayload.progress || {};
+      payload = resultPayload(rawPayload);
+      const period = payload.period || rawPayload.period || {};
+      const theme = payload.weekly_theme || rawPayload.weekly_theme || $("weeklyTheme").value.trim() || "-";
 
-      $("lastRun").textContent = formatDate(payload.generated_at);
+      $("lastRun").textContent = formatDate(payload.generated_at || rawPayload.finished_at || rawPayload.updated_at);
       $("period").textContent = `${period.date_from || "-"} .. ${period.date_to || "-"}`;
       $("activeTheme").textContent = theme;
+      $("foundCalls").textContent = progress.total_calls ?? "-";
+      $("analyzedCalls").textContent = progress.analyzed_calls ?? progress.processed_calls ?? "-";
+      $("remainingCalls").textContent = progress.remaining_analysis_calls ?? progress.remaining_calls ?? "-";
 
       const managers = payload.managers || {};
       setManager("sv", managers.Svetlana || { no_calls: true, report_text: "Нет данных по Светлане." });
@@ -483,7 +647,7 @@
 
     async function waitForRun(runId) {
       const started = Date.now();
-      const timeoutMs = 12 * 60 * 1000;
+      const timeoutMs = 45 * 60 * 1000;
       while (Date.now() - started < timeoutMs) {
         await new Promise((resolve) => setTimeout(resolve, 10000));
         const state = extractPayload(await api("/sales-orchestrator-state", "GET"));
@@ -492,15 +656,24 @@
           setStatus("Анализ запущен. Жду актуальный результат...", "");
           continue;
         }
-        if (run.status === "success" && run.result) {
-          render(run.result);
-          setStatus("Анализ завершен. Карточки обновлены.", "ok");
+        if ((run.status === "success" || run.status === "done" || run.status === "partial") && run.result) {
+          render(run);
+          const p = run.progress || {};
+          const found = p.total_calls ?? 0;
+          const analyzed = p.analyzed_calls ?? p.processed_calls ?? 0;
+          const left = p.remaining_analysis_calls ?? p.remaining_calls ?? 0;
+          const suffix = found > analyzed ? ` Найдено ${found}, глубоко разобрано ${analyzed}, в очереди ${left}.` : "";
+          setStatus("Анализ завершен. Карточки обновлены." + suffix, found > analyzed ? "" : "ok");
           return;
         }
-        if (run.status === "error") {
+        if (run.status === "error" || run.status === "failed") {
           throw new Error(run.error || "Анализ завершился ошибкой");
         }
-        setStatus("Анализ идет. Обычно это занимает несколько минут...", "");
+        const p = run.progress || {};
+        const found = p.total_calls ?? 0;
+        const analyzed = p.analyzed_calls ?? p.processed_calls ?? 0;
+        const left = p.remaining_analysis_calls ?? p.remaining_calls ?? 0;
+        setStatus(`Анализ идет. Найдено: ${found}, глубоко разобрано: ${analyzed}, осталось: ${left}.`, "");
       }
       throw new Error("Анализ еще идет. Нажмите «Обновить состояние» чуть позже.");
     }
@@ -553,8 +726,8 @@
         const data = await api("/sales-orchestrator-state", "GET");
         const payload = extractPayload(data);
         if (payload.last_run) {
-          if (payload.last_run.status === "success" && payload.last_run.result) {
-            render(payload.last_run.result);
+          if ((payload.last_run.status === "success" || payload.last_run.status === "done" || payload.last_run.status === "partial") && payload.last_run.result) {
+            render(payload.last_run);
           }
           if (payload.weekly_theme) $("weeklyTheme").value = payload.weekly_theme;
           setStatus(payload.last_run.status === "running" ? "Анализ еще идет." : "Состояние обновлено.", payload.last_run.status === "running" ? "" : "ok");
@@ -570,6 +743,9 @@
       $("lastRun").textContent = "-";
       $("period").textContent = "-";
       $("activeTheme").textContent = "-";
+      $("foundCalls").textContent = "-";
+      $("analyzedCalls").textContent = "-";
+      $("remainingCalls").textContent = "-";
 
       $("pillSv").className = "pill off";
       $("pillKt").className = "pill off";
@@ -580,6 +756,10 @@
       $("metaKt").textContent = "После запуска появится персональный разбор.";
       $("textSv").textContent = "Пока ничего нет.";
       $("textKt").textContent = "Пока ничего нет.";
+      $("scoreSv").innerHTML = "";
+      $("scoreKt").innerHTML = "";
+      $("insightsSv").innerHTML = "";
+      $("insightsKt").innerHTML = "";
 
       setStatus("Экран очищен.", "");
     }
