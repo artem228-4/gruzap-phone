@@ -821,16 +821,20 @@
       const failed = Number(progress.failed_calls || 0);
       const terminal = ["success", "done", "partial"].includes(status);
       const error = ["error", "failed"].includes(status);
-      const waiting = !total && !terminal && !error && status !== "idle";
+      const active = !terminal && !error && status !== "idle";
+      const waiting = active && !total;
+      const transcribing = active && total > 0 && analyzed === 0;
       const percent = total ? Math.max(0, Math.min(100, Math.round((analyzed / total) * 100))) : (terminal ? 100 : 0);
 
       panel.className = "analysis-progress";
-      panel.classList.add(error ? "is-error" : terminal ? "is-done" : waiting ? "is-waiting" : status === "idle" ? "is-idle" : status === "starting" ? "is-starting" : "is-running");
+      panel.classList.add(error ? "is-error" : terminal ? "is-done" : (waiting || transcribing) ? "is-waiting" : status === "idle" ? "is-idle" : status === "starting" ? "is-starting" : "is-running");
       ring.style.setProperty("--p", String(percent));
-      percentEl.textContent = waiting ? "..." : `${percent}%`;
+      percentEl.textContent = (waiting || transcribing) ? "..." : `${percent}%`;
       titleEl.textContent = stageLabel(status, progress);
       metaEl.textContent = total
-        ? `Глубоко разобрано ${analyzed} из ${total}. В очереди ${remaining}. Ошибок: ${failed}.`
+        ? transcribing
+          ? `Найдено ${total} звонков. Сейчас идет транскрибация, процент появится после первых AI-разборов. В очереди ${remaining}. Ошибок: ${failed}.`
+          : `Глубоко разобрано ${analyzed} из ${total}. В очереди ${remaining}. Ошибок: ${failed}.`
         : waiting
           ? "n8n принял запуск, ждем список звонков и первые транскрипты."
           : "Нажмите «Запустить анализ», чтобы увидеть ход обработки.";
