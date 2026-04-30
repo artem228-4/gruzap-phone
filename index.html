@@ -1047,8 +1047,9 @@
       const metaEl = $("progressMeta");
       const total = Number(progress.total_calls || 0);
       const analyzed = Math.max(Number(progress.analyzed_calls || 0), Number(progress.processed_calls || 0));
-      const remaining = total ? Math.max(total - analyzed - failed - Number(progress.skipped_calls || 0), 0) : Number(progress.remaining_analysis_calls ?? progress.remaining_calls ?? 0);
       const failed = Number(progress.failed_calls || 0);
+      const skipped = Number(progress.skipped_calls || 0);
+      const remaining = total ? Math.max(total - analyzed - failed - skipped, 0) : Number(progress.remaining_analysis_calls ?? progress.remaining_calls ?? 0);
       const counts = pipelineCounts(progress, context);
       const terminal = ["success", "done", "partial"].includes(status);
       const error = ["error", "failed"].includes(status);
