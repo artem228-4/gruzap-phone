@@ -1461,23 +1461,36 @@
       }
     }
 
+    function applySavedTheme(payload) {
+      if (!payload || !payload.weekly_theme) return;
+      $("weeklyTheme").value = payload.weekly_theme;
+      $("activeTheme").textContent = payload.weekly_theme;
+    }
+
+    async function loadSavedTheme() {
+      try {
+        const payload = extractPayload(await api("/sales-orchestrator-state", "GET"));
+        applySavedTheme(payload);
+      } catch (e) {
+        setStatus("Не удалось загрузить сохраненную тему: " + e.message, "err");
+      }
+    }
+
     async function refreshState() {
       try {
-        setStatus("Обновляю состояние...", "");
+        setStatus("Загружаю последний сохраненный отчет. Новый анализ не запускается.", "");
         const data = await api("/sales-orchestrator-state", "GET");
         const payload = extractPayload(data);
+        applySavedTheme(payload);
         if (payload.last_run) {
           updateProgressRing(payload.last_run.progress || {}, payload.last_run.status || "idle", payload.last_run);
           updateTranscriptFeeds(payload.last_run, payload.last_run.status || "idle");
           if (payload.last_run.result) renderCustomerInsights(payload.last_run.result.customer_insights || null);
           if ((payload.last_run.status === "success" || payload.last_run.status === "done" || payload.last_run.status === "partial") && payload.last_run.result) {
             render(payload.last_run);
+            applySavedTheme(payload);
           }
-          if (payload.weekly_theme) {
-            $("weeklyTheme").value = payload.weekly_theme;
-            $("activeTheme").textContent = payload.weekly_theme;
-          }
-          setStatus(payload.last_run.status === "running" ? "Анализ еще идет." : "Состояние обновлено.", payload.last_run.status === "running" ? "" : "ok");
+          setStatus(payload.last_run.status === "running" ? "Анализ еще идет." : "Последний сохраненный отчет загружен. Новый анализ не запускался.", payload.last_run.status === "running" ? "" : "ok");
         } else {
           setStatus("Состояние получено, запусков пока нет.", "");
         }
@@ -1535,6 +1548,7 @@
     $("runBtn").addEventListener("click", runAnalysis);
     $("refreshBtn").addEventListener("click", refreshState);
     $("clearBtn").addEventListener("click", clearScreen);
+    loadSavedTheme();
   </script>
 </body>
 </html>
