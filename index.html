@@ -1418,8 +1418,10 @@
       }
       try {
         setStatus("Сохраняю тему...", "");
-        const data = await api("/sales-orchestrator-theme", "POST", { weekly_theme: theme });
-        $("activeTheme").textContent = data.weekly_theme || theme;
+        const data = extractPayload(await api("/sales-orchestrator-theme", "POST", { weekly_theme: theme }));
+        const savedTheme = data.weekly_theme || theme;
+        $("weeklyTheme").value = savedTheme;
+        $("activeTheme").textContent = savedTheme;
         setStatus("Тема недели сохранена.", "ok");
       } catch (e) {
         setStatus("Ошибка сохранения: " + e.message, "err");
@@ -1471,7 +1473,10 @@
           if ((payload.last_run.status === "success" || payload.last_run.status === "done" || payload.last_run.status === "partial") && payload.last_run.result) {
             render(payload.last_run);
           }
-          if (payload.weekly_theme) $("weeklyTheme").value = payload.weekly_theme;
+          if (payload.weekly_theme) {
+            $("weeklyTheme").value = payload.weekly_theme;
+            $("activeTheme").textContent = payload.weekly_theme;
+          }
           setStatus(payload.last_run.status === "running" ? "Анализ еще идет." : "Состояние обновлено.", payload.last_run.status === "running" ? "" : "ok");
         } else {
           setStatus("Состояние получено, запусков пока нет.", "");
