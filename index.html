@@ -1397,7 +1397,7 @@
           throw new Error(run.error || "Анализ завершился ошибкой");
         }
         const p = run.progress || {};
-        updateProgressRing(p, run.status || "running");
+        updateProgressRing(p, run.status || "running", run);
         updateTranscriptFeeds(run, run.status || "running");
         const found = p.total_calls ?? 0;
         const analyzed = Math.max(Number(p.analyzed_calls || 0), Number(p.processed_calls || 0));
