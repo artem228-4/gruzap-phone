@@ -1028,7 +1028,7 @@
 
     function stageLabel(status, progress = {}, context = {}) {
       const total = Number(progress.total_calls || 0);
-      const analyzed = Number(progress.analyzed_calls ?? progress.processed_calls ?? 0);
+      const analyzed = Math.max(Number(progress.analyzed_calls || 0), Number(progress.processed_calls || 0));
       const counts = pipelineCounts(progress, context);
       if (status === "error" || status === "failed") return "Ошибка анализа";
       if (status === "success" || status === "done" || status === "partial") return "Анализ завершен";
@@ -1046,8 +1046,8 @@
       const titleEl = $("progressTitle");
       const metaEl = $("progressMeta");
       const total = Number(progress.total_calls || 0);
-      const analyzed = Number(progress.analyzed_calls ?? progress.processed_calls ?? 0);
-      const remaining = Number(progress.remaining_analysis_calls ?? progress.remaining_calls ?? 0);
+      const analyzed = Math.max(Number(progress.analyzed_calls || 0), Number(progress.processed_calls || 0));
+      const remaining = total ? Math.max(total - analyzed - failed - Number(progress.skipped_calls || 0), 0) : Number(progress.remaining_analysis_calls ?? progress.remaining_calls ?? 0);
       const failed = Number(progress.failed_calls || 0);
       const counts = pipelineCounts(progress, context);
       const terminal = ["success", "done", "partial"].includes(status);
@@ -1358,8 +1358,8 @@
       $("period").textContent = `${period.date_from || "-"} .. ${period.date_to || "-"}`;
       $("activeTheme").textContent = theme;
       $("foundCalls").textContent = progress.total_calls ?? "-";
-      $("analyzedCalls").textContent = progress.analyzed_calls ?? progress.processed_calls ?? "-";
-      $("remainingCalls").textContent = progress.remaining_analysis_calls ?? progress.remaining_calls ?? "-";
+      $("analyzedCalls").textContent = Math.max(Number(progress.analyzed_calls || 0), Number(progress.processed_calls || 0)) || "-";
+      $("remainingCalls").textContent = progress.total_calls ? Math.max(Number(progress.total_calls || 0) - Math.max(Number(progress.analyzed_calls || 0), Number(progress.processed_calls || 0)) - Number(progress.failed_calls || 0) - Number(progress.skipped_calls || 0), 0) : (progress.remaining_analysis_calls ?? progress.remaining_calls ?? "-");
       updateProgressRing(progress, runStatus, rawPayload);
       updateTranscriptFeeds(rawPayload, runStatus);
       renderCustomerInsights(payload.customer_insights || rawPayload.customer_insights || null);
@@ -1386,8 +1386,8 @@
           render(run);
           const p = run.progress || {};
           const found = p.total_calls ?? 0;
-          const analyzed = p.analyzed_calls ?? p.processed_calls ?? 0;
-          const left = p.remaining_analysis_calls ?? p.remaining_calls ?? 0;
+          const analyzed = Math.max(Number(p.analyzed_calls || 0), Number(p.processed_calls || 0));
+          const left = found ? Math.max(Number(found || 0) - analyzed - Number(p.failed_calls || 0) - Number(p.skipped_calls || 0), 0) : (p.remaining_analysis_calls ?? p.remaining_calls ?? 0);
           const suffix = found > analyzed ? ` Найдено ${found}, глубоко разобрано ${analyzed}, в очереди ${left}.` : "";
           setStatus("Анализ завершен. Карточки обновлены." + suffix, found > analyzed ? "" : "ok");
           return;
@@ -1399,8 +1399,8 @@
         updateProgressRing(p, run.status || "running");
         updateTranscriptFeeds(run, run.status || "running");
         const found = p.total_calls ?? 0;
-        const analyzed = p.analyzed_calls ?? p.processed_calls ?? 0;
-        const left = p.remaining_analysis_calls ?? p.remaining_calls ?? 0;
+        const analyzed = Math.max(Number(p.analyzed_calls || 0), Number(p.processed_calls || 0));
+        const left = found ? Math.max(Number(found || 0) - analyzed - Number(p.failed_calls || 0) - Number(p.skipped_calls || 0), 0) : (p.remaining_analysis_calls ?? p.remaining_calls ?? 0);
         const counts = pipelineCounts(p, run);
         const transcribing = Math.min(counts.transcribing || 0, found || 0);
         const stageText = analyzed ? `глубоко разобрано: ${analyzed}` : transcribing ? `в транскрибации: ${transcribing}` : `подготовка записей`;
