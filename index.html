@@ -1499,14 +1499,21 @@
         const payload = extractPayload(data);
         applySavedTheme(payload);
         if (payload.last_run) {
-          updateProgressRing(payload.last_run.progress || {}, payload.last_run.status || "idle", payload.last_run);
-          updateTranscriptFeeds(payload.last_run, payload.last_run.status || "idle");
-          if (payload.last_run.result) renderCustomerInsights(payload.last_run.result.customer_insights || null);
-          if ((payload.last_run.status === "success" || payload.last_run.status === "done" || payload.last_run.status === "partial") && payload.last_run.result) {
-            render(payload.last_run);
+          const run = payload.last_run;
+          const isReportable = payload.last_run_is_reportable !== false && !!run.result;
+          updateProgressRing(run.progress || {}, run.status || "idle", run);
+          updateTranscriptFeeds(isReportable ? run : null, run.status || "idle");
+          if (isReportable) renderCustomerInsights(run.result.customer_insights || null);
+          if ((run.status === "success" || run.status === "done" || run.status === "partial") && isReportable) {
+            render(run);
             applySavedTheme(payload);
           }
-          setStatus(payload.last_run.status === "running" ? "Анализ еще идет." : "Последний сохраненный отчет загружен. Новый анализ не запускался.", payload.last_run.status === "running" ? "" : "ok");
+          const statusText = run.status === "running"
+            ? "Анализ еще идет."
+            : isReportable
+              ? "Последний сохраненный отчет загружен. Новый анализ не запускался."
+              : "Состояние получено. Последний технический запуск не является готовым отчетом.";
+          setStatus(statusText, run.status === "running" ? "" : isReportable ? "ok" : "");
         } else {
           setStatus("Состояние получено, запусков пока нет.", "");
         }
