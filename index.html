@@ -1506,22 +1506,28 @@
         const data = await api("/sales-orchestrator-state", "GET");
         const payload = extractPayload(data);
         applySavedTheme(payload);
-        if (payload.last_run) {
-          const run = payload.last_run;
-          const isReportable = payload.last_run_is_reportable !== false && !!run.result;
-          updateProgressRing(run.progress || {}, run.status || "idle", run);
+        const currentRun = payload.current_run || null;
+        const run = currentRun || payload.last_run || null;
+        if (run) {
+          const isCurrentRun = !!currentRun;
+          const progress = run.progress || {};
+          const found = Number(progress.total_calls ?? 0);
+          const isReportable = !!run.result && (isCurrentRun || payload.last_run_is_reportable !== false);
+          updateProgressRing(progress, run.status || "idle", run);
           updateTranscriptFeeds(isReportable ? run : null, run.status || "idle");
-          if (isReportable) renderCustomerInsights(run.result.customer_insights || null);
-          if ((run.status === "success" || run.status === "done" || run.status === "partial") && isReportable) {
+          renderCustomerInsights(isReportable ? run.result.customer_insights || null : null);
+          if (isReportable || isCurrentRun) {
             render(run);
             applySavedTheme(payload);
           }
           const statusText = run.status === "running"
             ? "Анализ еще идет."
             : isReportable
-              ? "Последний сохраненный отчет загружен. Новый анализ не запускался."
-              : "Состояние получено. Последний технический запуск не является готовым отчетом.";
-          setStatus(statusText, run.status === "running" ? "" : isReportable ? "ok" : "");
+              ? (isCurrentRun ? "Актуальный отчет загружен." : "Последний сохраненный отчет загружен. Новый анализ не запускался.")
+              : isCurrentRun && found === 0
+                ? "Последний анализ завершен: за выбранный период звонков не найдено."
+                : "Состояние получено. Последний технический запуск не является готовым отчетом.";
+          setStatus(statusText, run.status === "running" ? "" : isReportable || (isCurrentRun && found === 0) ? "ok" : "");
         } else {
           setStatus("Состояние получено, запусков пока нет.", "");
         }
