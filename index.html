@@ -1392,21 +1392,29 @@
       while (Date.now() - started < timeoutMs) {
         await new Promise((resolve) => setTimeout(resolve, 10000));
         const state = extractPayload(await api("/sales-orchestrator-state", "GET"));
-        const run = state.last_run || {};
+        const currentRun = state.current_run && state.current_run.run_id === runId ? state.current_run : null;
+        const run = currentRun || state.last_run || {};
         if (run.run_id !== runId) {
           setStatus("Анализ запущен. Жду актуальный результат...", "");
           continue;
         }
         updateProgressRing(run.progress || {}, run.status || "running", run);
         updateTranscriptFeeds(run, run.status || "running");
-        if ((run.status === "success" || run.status === "done" || run.status === "partial") && run.result) {
-          render(run);
+        if (run.status === "success" || run.status === "done" || run.status === "partial") {
           const p = run.progress || {};
-          const found = p.total_calls ?? 0;
+          const found = Number(p.total_calls ?? 0);
           const analyzed = Math.max(Number(p.analyzed_calls || 0), Number(p.processed_calls || 0));
-          const left = found ? Math.max(Number(found || 0) - analyzed - Number(p.failed_calls || 0) - Number(p.skipped_calls || 0), 0) : (p.remaining_analysis_calls ?? p.remaining_calls ?? 0);
-          const suffix = found > analyzed ? ` Найдено ${found}, глубоко разобрано ${analyzed}, в очереди ${left}.` : "";
-          setStatus("Анализ завершен. Карточки обновлены." + suffix, found > analyzed ? "" : "ok");
+          const left = found ? Math.max(found - analyzed - Number(p.failed_calls || 0) - Number(p.skipped_calls || 0), 0) : (p.remaining_analysis_calls ?? p.remaining_calls ?? 0);
+          if (run.result) {
+            render(run);
+            const suffix = found > analyzed ? ` Найдено ${found}, глубоко разобрано ${analyzed}, в очереди ${left}.` : "";
+            setStatus("Анализ завершен. Карточки обновлены." + suffix, found > analyzed ? "" : "ok");
+          } else if (found === 0) {
+            renderCustomerInsights(null);
+            setStatus("Анализ завершен: за выбранный период звонков не найдено.", "ok");
+          } else {
+            setStatus("Анализ завершен, но готовый отчет не сформирован. Нажмите «Обновить состояние» для последнего сохраненного отчета.", "");
+          }
           return;
         }
         if (run.status === "error" || run.status === "failed") {
