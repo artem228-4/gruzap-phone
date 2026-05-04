@@ -1359,6 +1359,15 @@
         <div class="score-card"><div class="k">Оценка менеджера</div><div class="v">${managerScore}</div></div>
         <div class="score-card"><div class="k">Тема недели</div><div class="v">${themeScore}</div></div>
       `;
+      if (noCalls) {
+        $(refs.text).textContent = "Пока нет звонков для разбора за выбранный период.";
+        $(refs.insights).innerHTML = `
+          <div class="insight-block"><h4>Что улучшить в первую очередь</h4><ul><li>Появится после первых звонков.</li></ul></div>
+          <div class="insight-block"><h4>Ошибки и риск для продажи</h4><ul><li>Пока нет данных.</li></ul></div>
+          <div class="insight-block"><h4>Сильные фразы</h4><ul><li>Пока нет данных.</li></ul></div>
+          <div class="insight-block"><h4>План на следующую смену</h4><ul><li>Дождаться звонков, подходящих под период анализа.</li></ul></div>`;
+        return;
+      }
       $(refs.text).textContent = normalizeCardText(data.report_text || analysis.report_text);
       $(refs.insights).innerHTML = renderInsights(data);
     }
