@@ -1133,6 +1133,20 @@
       return /цен|дорог|плат|ати|хуже|неудоб|стоим|зачем|вопрос|не понял|подума/i.test(String(text || ""));
     }
 
+    function normalizeFeedText(text) {
+      return String(text || "").trim().replace(/\s+/g, " ").toLowerCase();
+    }
+
+    function dedupeTranscriptSnippets(items = []) {
+      const seen = new Set();
+      return items.filter((item) => {
+        const key = [item.manager || "", item.callIndex || "", item.speaker || "", normalizeFeedText(item.text)].join("::");
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+    }
+
     function extractLiveTranscriptSnippets(payload) {
       const result = resultPayload(payload || {});
       const managers = result.managers || {};
@@ -1143,17 +1157,19 @@
         dialogue.forEach((line, index) => {
           const text = compactText(line?.text, 165);
           if (!text) return;
+          const speaker = ["manager", "client", "unknown"].includes(line?.speaker) ? line.speaker : "unknown";
           snippets.push({
             manager,
-            speaker: line.speaker || "unknown",
+            speaker,
             text,
             callIndex: line.call_index || index + 1,
             confidence: Number(line.confidence ?? 0),
-            risk: isRiskPhrase(text),
+            risk: speaker === "client" && isRiskPhrase(text),
+            managerRisk: speaker === "manager" && isRiskPhrase(text),
           });
         });
       });
-      return snippets;
+      return dedupeTranscriptSnippets(snippets);
     }
 
     function placeholderFeed(mode, status = "idle") {
@@ -1243,13 +1259,13 @@
       const heading = mode === "left" ? "Менеджерские фразы" : "Возражения клиентов";
       let cards = [];
       if (snippets.length) {
-        cards = snippets
-          .filter((item) => mode === "left" ? item.speaker === "manager" : item.speaker !== "manager" || item.risk)
-          .sort((a, b) => mode === "right" ? Number(b.risk) - Number(a.risk) : 0)
+        cards = dedupeTranscriptSnippets(snippets)
+          .filter((item) => mode === "left" ? item.speaker === "manager" : item.speaker === "client")
+          .sort((a, b) => mode === "right" ? Number(b.risk) - Number(a.risk) : Number(b.managerRisk) - Number(a.managerRisk))
           .slice(0, 5)
           .map((item) => ({
             ...item,
-            cls: item.risk ? "risk" : item.speaker === "client" ? "client" : item.speaker === "manager" ? "manager" : "system",
+            cls: item.risk ? "risk" : item.managerRisk ? "risk" : item.speaker === "client" ? "client" : item.speaker === "manager" ? "manager" : "system",
           }));
       }
       if (!cards.length) {
