@@ -1526,7 +1526,7 @@
           return;
         }
         if (run.status === "error" || run.status === "failed") {
-          throw new Error(run.error || "Анализ завершился ошибкой");
+          throw new Error(run.error || run.result?.error || "Анализ завершился ошибкой");
         }
         const p = run.progress || {};
         updateProgressRing(p, run.status || "running", run);
@@ -1615,27 +1615,38 @@
         const payload = extractPayload(data);
         applySavedTheme(payload);
         const currentRun = payload.current_run || null;
-        const run = currentRun || payload.last_run || null;
+        const currentStatus = currentRun ? (currentRun.status || "idle") : "idle";
+        const currentFailed = ["error", "failed"].includes(currentStatus);
+        const currentRunning = currentStatus === "running";
+        const reportRun = payload.last_run || null;
+        const run = currentRunning ? currentRun : (reportRun || currentRun || null);
         if (run) {
-          const isCurrentRun = !!currentRun;
+          const isCurrentRun = run === currentRun;
           const progress = run.progress || {};
           const found = Number(progress.total_calls ?? 0);
-          const isReportable = !!run.result && (isCurrentRun || payload.last_run_is_reportable !== false);
+          const isReportable = !!run.result && (!isCurrentRun || payload.last_run_is_reportable !== false || ["success", "done", "partial"].includes(run.status));
           updateProgressRing(progress, run.status || "idle", run);
           updateTranscriptFeeds(isReportable ? run : null, run.status || "idle");
           renderCustomerInsights(isReportable ? run.result.customer_insights || null : null);
-          if (isReportable || isCurrentRun) {
+          if (isReportable) {
             render(run);
             applySavedTheme(payload);
           }
-          const statusText = run.status === "running"
-            ? "Анализ еще идет."
-            : isReportable
-              ? (isCurrentRun ? "Актуальный отчет загружен." : "Последний сохраненный отчет загружен. Новый анализ не запускался.")
-              : isCurrentRun && found === 0
-                ? "Последний анализ завершен: за выбранный период звонков не найдено."
-                : "Состояние получено. Последний технический запуск не является готовым отчетом.";
-          setStatus(statusText, run.status === "running" ? "" : isReportable || (isCurrentRun && found === 0) ? "ok" : "");
+          if (currentFailed) {
+            const currentError = currentRun?.error || currentRun?.result?.error || "Не удалось получить данные для звонков.";
+            updateProgressRing(currentRun.progress || {}, currentStatus, currentRun);
+            updateTranscriptFeeds(null, currentStatus);
+            setStatus("Последний запуск остановлен: " + currentError, "err");
+          } else {
+            const statusText = run.status === "running"
+              ? "Анализ еще идет."
+              : isReportable
+                ? (isCurrentRun ? "Актуальный отчет загружен." : "Последний сохраненный отчет загружен. Новый анализ не запускался.")
+                : isCurrentRun && found === 0
+                  ? "Последний анализ завершен: за выбранный период звонков не найдено."
+                  : "Состояние получено. Последний технический запуск не является готовым отчетом.";
+            setStatus(statusText, run.status === "running" ? "" : isReportable || (isCurrentRun && found === 0) ? "ok" : "");
+          }
         } else {
           setStatus("Состояние получено, запусков пока нет.", "");
         }
