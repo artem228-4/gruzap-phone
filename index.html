@@ -811,6 +811,63 @@
     .feed-card.error { --accent: var(--red); }
     .feed-card.system { --accent: var(--blue); }
 
+    .feed-card.is-clickable { cursor: pointer; }
+    .feed-card.is-clickable:hover { transform: translateY(-2px); border-color: rgba(47, 226, 255, .58); box-shadow: 0 14px 34px rgba(47, 226, 255, .13); }
+    .feed-score { color: #86ffd5; font-weight: 900; }
+
+    .score-basis {
+      margin-top: 10px;
+      border: 1px solid rgba(47, 226, 255, .22);
+      border-radius: 14px;
+      padding: 12px;
+      background: rgba(3, 12, 25, .42);
+    }
+    .score-basis summary { cursor: pointer; font-weight: 900; color: #dbe8ff; }
+    .score-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+    .score-chip {
+      border: 1px solid rgba(124, 152, 204, .22);
+      border-radius: 12px;
+      padding: 8px;
+      background: rgba(12, 22, 42, .62);
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .score-chip b { display: block; color: var(--text); font-family: Orbitron, sans-serif; font-size: 16px; margin-top: 3px; }
+
+    .evidence-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: none;
+      align-items: stretch;
+      justify-content: flex-end;
+      background: rgba(2, 6, 14, .62);
+      backdrop-filter: blur(6px);
+    }
+    .evidence-modal.open { display: flex; }
+    .evidence-drawer {
+      width: min(720px, 100%);
+      height: 100%;
+      overflow: auto;
+      padding: 18px;
+      border-left: 1px solid rgba(47, 226, 255, .36);
+      background: linear-gradient(180deg, rgba(8, 15, 31, .98), rgba(5, 10, 22, .98));
+      box-shadow: -30px 0 80px rgba(0, 0, 0, .46);
+    }
+    .evidence-drawer-head { display: flex; justify-content: space-between; gap: 12px; align-items: start; margin-bottom: 12px; }
+    .evidence-close {
+      border: 1px solid rgba(124, 152, 204, .28);
+      border-radius: 12px;
+      background: rgba(15, 27, 50, .8);
+      color: var(--text);
+      padding: 8px 12px;
+      cursor: pointer;
+      font-weight: 900;
+    }
+    .evidence-section { border: 1px solid rgba(124, 152, 204, .22); border-radius: 16px; padding: 12px; background: rgba(7, 14, 28, .62); margin-top: 10px; }
+    .evidence-section h4 { margin: 0 0 8px; }
+    .transcript-text { white-space: pre-wrap; line-height: 1.55; color: #d9e7ff; max-height: 420px; overflow: auto; }
+
     .feed-meta {
       display: flex;
       align-items: center;
@@ -1019,7 +1076,22 @@
         </article>
       </section>
     </section>
+
   </main>
+
+  <div class="evidence-modal" id="evidenceModal" aria-hidden="true">
+    <aside class="evidence-drawer" role="dialog" aria-modal="true" aria-label="Доказательная база звонка">
+      <div class="evidence-drawer-head">
+        <div>
+          <p class="customer-eyebrow">CALL EVIDENCE</p>
+          <h2 id="evidenceTitle">Звонок</h2>
+          <p class="muted" id="evidenceSubtitle">Текст звонка и основание AI-вывода.</p>
+        </div>
+        <button class="evidence-close" id="evidenceClose" type="button">Закрыть</button>
+      </div>
+      <div id="evidenceBody" class="evidence-section">Выберите карточку в боковой ленте.</div>
+    </aside>
+  </div>
 
   <script>
     const $ = (id) => document.getElementById(id);
@@ -1261,6 +1333,10 @@
             speaker,
             text,
             callIndex: line.call_index || index + 1,
+            callId: line.call_id || line.callId || "",
+            callScore: Number(line.call_score || 0),
+            durationSec: Number(line.duration_sec || 0),
+            tag: line.tag || "",
             confidence: Number(line.confidence ?? 0),
             risk: speaker === "client" && isRiskPhrase(text),
             managerRisk: speaker === "manager" && isRiskPhrase(text),
@@ -1288,6 +1364,7 @@
     }
 
     let latestCustomerInsights = null;
+    let latestEvidenceRunId = null;
 
     function customerStateHtml(mode, text) {
       if (mode === "loading") {
@@ -1378,11 +1455,14 @@
       const delay = Math.min(index * 140, 700);
       const manager = card.manager ? ` · ${card.manager}` : "";
       const confidence = card.confidence ? ` · ${Math.round(card.confidence * 100)}%` : "";
+      const clickable = card.callId ? " is-clickable" : "";
+      const score = card.callScore ? ` · оценка ${Math.round(card.callScore)}` : "";
+      const title = card.callId ? "Нажмите, чтобы открыть текст звонка и основание вывода" : "";
       return `
-        <div class="feed-card ${escapeHtml(card.cls || "system")}" style="--delay:${delay}ms">
+        <div class="feed-card ${escapeHtml(card.cls || "system")}${clickable}" data-call-id="${escapeHtml(card.callId || "")}" title="${escapeHtml(title)}" style="--delay:${delay}ms">
           <div class="feed-meta">
             <span class="speaker-badge">${escapeHtml(speakerTitle(card.speaker))}</span>
-            <span>${escapeHtml(`Звонок ${card.callIndex || "-"}${manager}${confidence}`)}</span>
+            <span>${escapeHtml(`Звонок ${card.callIndex || "-"}${manager}${confidence}`)}<span class="feed-score">${escapeHtml(score)}</span></span>
           </div>
           <div class="feed-text">${escapeHtml(card.text)}</div>
         </div>`;
@@ -1418,6 +1498,28 @@
         </div>`;
     }
 
+    function renderScoreBasis(analysis) {
+      const basis = analysis?.score_basis || {};
+      const sub = basis.sub_scores || {};
+      if (!Object.keys(basis).length && !Object.keys(sub).length) return "";
+      const chips = [
+        ["Тема недели", sub.weekly_theme],
+        ["Вопросы", sub.discovery],
+        ["Возражения", sub.objection_handling],
+        ["Закрытие", sub.closing],
+        ["Ясность", sub.clarity],
+        ["Вступление", sub.opening],
+      ].map(([name, value]) => `<div class="score-chip">${escapeHtml(name)}<b>${escapeHtml(value ?? "-")}</b></div>`).join("");
+      const quotes = Array.isArray(basis.evidence_quotes) ? basis.evidence_quotes.slice(0, 3) : [];
+      return `
+        <details class="score-basis" open>
+          <summary>Основание оценки</summary>
+          <p class="note">${escapeHtml(basis.score_reason || "Оценка построена по отдельным звонкам, цитатам и sub-scores.")}</p>
+          <div class="score-grid">${chips}</div>
+          ${quotes.length ? `<div class="dialogue-list" style="margin-top:10px">${quotes.map((q) => `<div class="dialogue-line"><span class="speaker">Цитата</span><span>${escapeHtml(compactText(q.phrase || q.text || "", 180))}</span></div>`).join("")}</div>` : ""}
+        </details>`;
+    }
+
     function renderInsights(data) {
       const analysis = data.analysis || data.analysis_json || {};
       if (!analysis || !Object.keys(analysis).length) return "";
@@ -1430,6 +1532,7 @@
         <div class="insight-block"><h4>Ошибки и риск для продажи</h4>${mistakes}</div>
         <div class="insight-block"><h4>Сильные фразы</h4>${phrases}</div>
         <div class="insight-block"><h4>План на следующую смену</h4>${plan}</div>
+        ${renderScoreBasis(analysis)}
         ${renderDialogue(analysis.dialogue)}
       `;
     }
@@ -1470,8 +1573,58 @@
       $(refs.insights).innerHTML = renderInsights(data);
     }
 
+
+    function evidenceModal(open) {
+      const modal = $("evidenceModal");
+      if (!modal) return;
+      modal.classList.toggle("open", !!open);
+      modal.setAttribute("aria-hidden", open ? "false" : "true");
+    }
+
+    function evidenceAccessCode() {
+      let code = localStorage.getItem("zvonarEvidenceAccessCode") || "";
+      if (!code) {
+        code = prompt("Введите код доступа к полному тексту звонка") || "";
+        if (code) localStorage.setItem("zvonarEvidenceAccessCode", code);
+      }
+      return code;
+    }
+
+    function renderEvidenceDetails(data) {
+      const call = data.call || {};
+      const evidence = data.evidence || {};
+      const transcript = data.transcript || {};
+      $("evidenceTitle").textContent = `${call.manager || "Звонок"} · оценка ${call.call_score || "-"}`;
+      $("evidenceSubtitle").textContent = `Длительность ${call.duration_sec || "-"} сек · качество ${call.transcript_quality || "-"}`;
+      const roleLines = Array.isArray(evidence.role_dialogue) ? evidence.role_dialogue.slice(0, 12) : [];
+      const objections = Array.isArray(evidence.client_objections) ? evidence.client_objections : [];
+      const quotes = Array.isArray(evidence.manager_quotes) ? evidence.manager_quotes : [];
+      $("evidenceBody").innerHTML = `
+        <div class="evidence-section"><h4>Почему такая оценка</h4><p>${escapeHtml(evidence.score_reason || call.score_reason || "Основание пока не собрано.")}</p></div>
+        <div class="evidence-section"><h4>Фразы менеджера</h4>${renderList(quotes, (x) => `${x.tag ? `[${x.tag}] ` : ""}${x.text || ""}${x.why ? ` — ${x.why}` : ""}`, "Нет выделенных фраз менеджера.")}</div>
+        <div class="evidence-section"><h4>Возражения и вопросы клиента</h4>${renderList(objections, (x) => `${x.type ? `[${x.type}] ` : ""}${x.text || ""}`, "Нет выделенных клиентских возражений.")}</div>
+        <div class="evidence-section"><h4>AI-разделение ролей</h4>${roleLines.length ? `<div class="dialogue-list">${roleLines.map((line) => `<div class="dialogue-line"><span class="speaker">${escapeHtml(speakerTitle(line.speaker))}</span><span>${escapeHtml(line.text || "")}</span></div>`).join("")}</div>` : "<p class='note'>Роли пока не восстановлены.</p>"}</div>
+        <div class="evidence-section"><h4>Полный transcript Whisper</h4><div class="transcript-text">${escapeHtml(transcript.text || "Текст не найден.")}</div></div>`;
+    }
+
+    async function openCallEvidence(callId) {
+      if (!callId || !latestEvidenceRunId) return;
+      evidenceModal(true);
+      $("evidenceBody").innerHTML = "Загружаю полный текст звонка...";
+      try {
+        const access_code = evidenceAccessCode();
+        if (!access_code) throw new Error("Нужен код доступа.");
+        const data = extractPayload(await api("/sales-orchestrator-call-transcript", "POST", { run_id: latestEvidenceRunId, call_id: callId, access_code }));
+        renderEvidenceDetails(data);
+      } catch (e) {
+        localStorage.removeItem("zvonarEvidenceAccessCode");
+        $("evidenceBody").innerHTML = `<div class="send-reports-note err">Не удалось открыть звонок: ${escapeHtml(e.message)}</div>`;
+      }
+    }
+
     function render(payload) {
       const rawPayload = payload || {};
+      latestEvidenceRunId = rawPayload.run_id || latestEvidenceRunId;
       const progress = rawPayload.progress || {};
       const runStatus = rawPayload.status || (rawPayload.result ? "done" : "idle");
       payload = resultPayload(rawPayload);
@@ -1704,6 +1857,12 @@
 
     $("sendReportSvBtn").addEventListener("click", () => sendManagerReport("Svetlana"));
     $("sendReportKtBtn").addEventListener("click", () => sendManagerReport("Konstantin"));
+    $("evidenceClose").addEventListener("click", () => evidenceModal(false));
+    $("evidenceModal").addEventListener("click", (event) => { if (event.target.id === "evidenceModal") evidenceModal(false); });
+    document.addEventListener("click", (event) => {
+      const card = event.target.closest(".feed-card.is-clickable");
+      if (card) openCallEvidence(card.dataset.callId);
+    });
     $("saveThemeBtn").addEventListener("click", saveTheme);
     $("runBtn").addEventListener("click", runAnalysis);
     $("refreshBtn").addEventListener("click", refreshState);
