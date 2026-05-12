@@ -758,7 +758,6 @@
       display: grid;
       gap: 10px;
       align-content: start;
-      pointer-events: none;
     }
 
     .feed-head {
@@ -811,7 +810,7 @@
     .feed-card.error { --accent: var(--red); }
     .feed-card.system { --accent: var(--blue); }
 
-    .feed-card.is-clickable { cursor: pointer; }
+    .feed-card.is-clickable { cursor: pointer; pointer-events: auto; }
     .feed-card.is-clickable:hover { transform: translateY(-2px); border-color: rgba(47, 226, 255, .58); box-shadow: 0 14px 34px rgba(47, 226, 255, .13); }
     .feed-score { color: #86ffd5; font-weight: 900; }
 
@@ -1868,6 +1867,7 @@
     $("refreshBtn").addEventListener("click", refreshState);
     $("clearBtn").addEventListener("click", clearScreen);
     loadSavedTheme();
+    refreshState();
   </script>
 </body>
 </html>
