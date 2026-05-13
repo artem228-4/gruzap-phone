@@ -1330,7 +1330,7 @@
 
     function isLikelyManagerPrompt(text) {
       const value = normalizeFeedText(text);
-      return /вам как.*актуально|удобно вам|хотел[аи] сказать|меня .* зовут|это сервис|сервис грузап|сделали.*приложени|скинуть.*ссылк|не актуально, да/.test(value);
+      return /вам как.*актуально|удобно вам|хотел[аи] сказать|меня .* зовут|это сервис|сервис грузап|сделали.*приложени|скинуть.*ссылк|не актуально, да|поняли вас|если будет интересно|можете посмотреть|оно бесплатно|везде доступно|можно скачать/.test(value);
     }
 
     function textIncludedInAny(text, items = []) {
@@ -1348,12 +1348,28 @@
 
     function dedupeTranscriptSnippets(items = []) {
       const seen = new Set();
-      return items.filter((item) => {
+      const exact = items.filter((item) => {
         const key = [item.manager || "", item.callIndex || "", item.speaker || "", normalizeFeedText(item.text)].join("::");
         if (seen.has(key)) return false;
         seen.add(key);
         return true;
       });
+      const compacted = [];
+      exact.forEach((item) => {
+        const text = normalizeFeedText(item.text);
+        const sameCallIndex = compacted.findIndex((existing) => (
+          existing.manager === item.manager &&
+          existing.callIndex === item.callIndex &&
+          existing.speaker === item.speaker &&
+          (normalizeFeedText(existing.text).includes(text) || text.includes(normalizeFeedText(existing.text)))
+        ));
+        if (sameCallIndex === -1) {
+          compacted.push(item);
+        } else if (text.length > normalizeFeedText(compacted[sameCallIndex].text).length) {
+          compacted[sameCallIndex] = item;
+        }
+      });
+      return compacted;
     }
 
     function extractLiveTranscriptSnippets(payload) {
