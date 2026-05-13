@@ -866,6 +866,28 @@
     .evidence-section { border: 1px solid rgba(124, 152, 204, .22); border-radius: 16px; padding: 12px; background: rgba(7, 14, 28, .62); margin-top: 10px; }
     .evidence-section h4 { margin: 0 0 8px; }
     .transcript-text { white-space: pre-wrap; line-height: 1.55; color: #d9e7ff; max-height: 420px; overflow: auto; }
+    .evidence-access { border-color: rgba(47, 226, 255, .34); background: linear-gradient(135deg, rgba(47, 226, 255, .1), rgba(6, 13, 29, .82)); }
+    .evidence-access-row { display: grid; grid-template-columns: 1fr auto; gap: 10px; margin-top: 12px; }
+    .evidence-access input {
+      min-width: 0;
+      border: 1px solid rgba(124, 152, 204, .3);
+      border-radius: 14px;
+      background: rgba(5, 12, 26, .84);
+      color: var(--text);
+      padding: 12px 14px;
+      font: inherit;
+      outline: none;
+    }
+    .evidence-access input:focus { border-color: rgba(47, 226, 255, .7); box-shadow: 0 0 0 3px rgba(47, 226, 255, .12); }
+    .evidence-access button {
+      border: 0;
+      border-radius: 14px;
+      background: linear-gradient(135deg, var(--accent), var(--mint));
+      color: #06111f;
+      padding: 12px 16px;
+      font-weight: 900;
+      cursor: pointer;
+    }
 
     .feed-meta {
       display: flex;
@@ -1581,12 +1603,31 @@
     }
 
     function evidenceAccessCode() {
-      let code = localStorage.getItem("zvonarEvidenceAccessCode") || "";
-      if (!code) {
-        code = prompt("Введите код доступа к полному тексту звонка") || "";
-        if (code) localStorage.setItem("zvonarEvidenceAccessCode", code);
-      }
-      return code;
+      return localStorage.getItem("zvonarEvidenceAccessCode") || "";
+    }
+
+    function renderEvidenceAccessForm(callId, message = "Введите код доступа, чтобы открыть полный текст звонка.") {
+      $("evidenceBody").innerHTML = `
+        <div class="evidence-section evidence-access">
+          <h4>Доступ к полному transcript</h4>
+          <p class="note">${escapeHtml(message)}</p>
+          <div class="evidence-access-row">
+            <input id="evidenceAccessInput" type="password" inputmode="numeric" autocomplete="off" placeholder="Код доступа">
+            <button id="evidenceAccessBtn" type="button">Открыть звонок</button>
+          </div>
+        </div>`;
+      const input = $("evidenceAccessInput");
+      const submit = () => {
+        const code = input.value.trim();
+        if (!code) return;
+        localStorage.setItem("zvonarEvidenceAccessCode", code);
+        openCallEvidence(callId);
+      };
+      $("evidenceAccessBtn").addEventListener("click", submit);
+      input.addEventListener("keydown", (event) => {
+        if (event.key === "Enter") submit();
+      });
+      input.focus();
     }
 
     function renderEvidenceDetails(data) {
@@ -1612,12 +1653,15 @@
       $("evidenceBody").innerHTML = "Загружаю полный текст звонка...";
       try {
         const access_code = evidenceAccessCode();
-        if (!access_code) throw new Error("Нужен код доступа.");
+        if (!access_code) {
+          renderEvidenceAccessForm(callId);
+          return;
+        }
         const data = extractPayload(await api("/sales-orchestrator-call-transcript", "POST", { run_id: latestEvidenceRunId, call_id: callId, access_code }));
         renderEvidenceDetails(data);
       } catch (e) {
         localStorage.removeItem("zvonarEvidenceAccessCode");
-        $("evidenceBody").innerHTML = `<div class="send-reports-note err">Не удалось открыть звонок: ${escapeHtml(e.message)}</div>`;
+        renderEvidenceAccessForm(callId, `Код не подошел или истек. Попробуйте еще раз. Деталь: ${e.message}`);
       }
     }
 
