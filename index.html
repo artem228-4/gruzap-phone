@@ -1328,6 +1328,24 @@
       return String(text || "").trim().replace(/\s+/g, " ").toLowerCase();
     }
 
+    function isLikelyManagerPrompt(text) {
+      const value = normalizeFeedText(text);
+      return /вам как.*актуально|удобно вам|хотел[аи] сказать|меня .* зовут|это сервис|сервис грузап|сделали.*приложени|скинуть.*ссылк|не актуально, да/.test(value);
+    }
+
+    function textIncludedInAny(text, items = []) {
+      const value = normalizeFeedText(text);
+      if (!value) return false;
+      return items.some((item) => {
+        const candidate = normalizeFeedText(item?.text || item?.phrase || "");
+        return candidate && (candidate.includes(value) || value.includes(candidate));
+      });
+    }
+
+    function isSafeClientText(text, managerQuotes = []) {
+      return !!normalizeFeedText(text) && !isLikelyManagerPrompt(text) && !textIncludedInAny(text, managerQuotes);
+    }
+
     function dedupeTranscriptSnippets(items = []) {
       const seen = new Set();
       return items.filter((item) => {
@@ -1457,6 +1475,7 @@
       if (snippets.length) {
         cards = dedupeTranscriptSnippets(snippets)
           .filter((item) => mode === "left" ? item.speaker === "manager" : item.speaker === "client")
+          .filter((item) => mode === "left" || isSafeClientText(item.text))
           .sort((a, b) => mode === "right" ? Number(b.risk) - Number(a.risk) : Number(b.managerRisk) - Number(a.managerRisk))
           .slice(0, 5)
           .map((item) => ({
@@ -1637,8 +1656,9 @@
       $("evidenceTitle").textContent = `${call.manager || "Звонок"} · оценка ${call.call_score || "-"}`;
       $("evidenceSubtitle").textContent = `Длительность ${call.duration_sec || "-"} сек · качество ${call.transcript_quality || "-"}`;
       const roleLines = Array.isArray(evidence.role_dialogue) ? evidence.role_dialogue.slice(0, 12) : [];
-      const objections = Array.isArray(evidence.client_objections) ? evidence.client_objections : [];
       const quotes = Array.isArray(evidence.manager_quotes) ? evidence.manager_quotes : [];
+      const objections = (Array.isArray(evidence.client_objections) ? evidence.client_objections : [])
+        .filter((item) => isSafeClientText(item?.text || "", quotes));
       $("evidenceBody").innerHTML = `
         <div class="evidence-section"><h4>Почему такая оценка</h4><p>${escapeHtml(evidence.score_reason || call.score_reason || "Основание пока не собрано.")}</p></div>
         <div class="evidence-section"><h4>Фразы менеджера</h4>${renderList(quotes, (x) => `${x.tag ? `[${x.tag}] ` : ""}${x.text || ""}${x.why ? ` — ${x.why}` : ""}`, "Нет выделенных фраз менеджера.")}</div>
