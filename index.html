@@ -1369,6 +1369,14 @@
       return !!value && isLikelyClientPhrase(value) && !isLikelyManagerPrompt(value) && !textIncludedInAny(value, managerQuotes);
     }
 
+    function cleanClientFeedText(text) {
+      const original = String(text || "").trim();
+      const parts = original.split(/(?<=[.!?…])\s+/).map(x => x.trim()).filter(Boolean);
+      const candidates = parts.length ? parts : [original];
+      const best = candidates.find((part) => isSafeClientText(part));
+      return best || original;
+    }
+
     function meaningfulQuoteText(text) {
       const value = normalizeFeedText(text);
       if (!value || value.length < 12) return false;
@@ -1420,10 +1428,12 @@
           const text = compactText(line?.text, 165);
           if (!meaningfulQuoteText(text)) return;
           const speaker = correctedSpeaker(line?.speaker, text);
+          const displayText = speaker === "client" ? compactText(cleanClientFeedText(text), 165) : text;
+          if (speaker === "client" && !isSafeClientText(displayText)) return;
           snippets.push({
             manager,
             speaker,
-            text,
+            text: displayText,
             callIndex: line.call_index || index + 1,
             callId: line.call_id || line.callId || "",
             callScore: Number(line.call_score || 0),
