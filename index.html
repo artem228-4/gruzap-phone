@@ -664,6 +664,7 @@
       border: 1px solid rgba(122, 152, 207, .26);
       border-radius: 16px;
       padding: 13px;
+      margin-bottom: 18px;
       background: rgba(6, 13, 26, .62);
       color: #d9e7ff;
       line-height: 1.48;
@@ -672,16 +673,17 @@
 
     .customer-bars {
       display: grid;
-      gap: 9px;
+      gap: 13px;
     }
 
     .bar-row {
       display: grid;
-      grid-template-columns: minmax(92px, 1fr) 1.2fr 34px;
-      gap: 9px;
+      grid-template-columns: minmax(140px, 1.15fr) minmax(180px, 1.45fr) 42px;
+      gap: 13px;
       align-items: center;
       color: #c9d9f4;
       font-size: 12px;
+      line-height: 1.25;
     }
 
     .bar-track {
@@ -1311,6 +1313,11 @@
       return Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : 0;
     }
 
+    function scoreDisplay(value) {
+      const n = Number(value);
+      return Number.isFinite(n) && n > 0 ? Math.max(0, Math.min(100, Math.round(n))) : "-";
+    }
+
     function compactText(value, max = 190) {
       const text = String(value || "").replace(/\s+/g, " " ).trim();
       return text.length > max ? text.slice(0, max - 1).trim() + "…" : text;
@@ -1330,7 +1337,19 @@
 
     function isLikelyManagerPrompt(text) {
       const value = normalizeFeedText(text);
-      return /вам как.*актуально|удобно вам|хотел[аи] сказать|меня .* зовут|это сервис|сервис грузап|сделали.*приложени|скинуть.*ссылк|не актуально, да|поняли вас|если будет интересно|можете посмотреть|оно бесплатно|везде доступно|можно скачать/.test(value);
+      return /вам как.*актуально|удобно вам|хотел[аи] сказать|меня .* зовут|это сервис|сервис грузап|сделали.*приложени|скинуть.*ссылк|не актуально, да|поняли вас|если будет интересно|можете посмотреть|оно бесплатно|везде доступно|можно скачать|какие-то вопросы|может быть.*проблем|подскажите.*android|ссылк[ау] зависит|хорошо.*отправим/.test(value);
+    }
+
+    function isLikelyClientPhrase(text) {
+      const value = normalizeFeedText(text);
+      return /по какому вопросу|не актуально|я не понимаю|для чего я скачал|что это|сумма|ндс|без ндс|наличн|было бы|пользоваться|пользовался|проблем[аы]|вопрос|сколько стоит|рейтинг|скрываете|попробовать|интересно/.test(value);
+    }
+
+    function correctedSpeaker(speaker, text) {
+      const raw = ["manager", "client", "unknown"].includes(speaker) ? speaker : "unknown";
+      if (isLikelyManagerPrompt(text)) return "manager";
+      if (raw === "manager" && isLikelyClientPhrase(text) && !isLikelyManagerPrompt(text)) return "client";
+      return raw;
     }
 
     function textIncludedInAny(text, items = []) {
@@ -1343,7 +1362,22 @@
     }
 
     function isSafeClientText(text, managerQuotes = []) {
-      return !!normalizeFeedText(text) && !isLikelyManagerPrompt(text) && !textIncludedInAny(text, managerQuotes);
+      const value = normalizeFeedText(text);
+      return !!value && isLikelyClientPhrase(value) && !isLikelyManagerPrompt(value) && !textIncludedInAny(value, managerQuotes);
+    }
+
+    function meaningfulQuoteText(text) {
+      const value = normalizeFeedText(text);
+      if (!value || value.length < 12) return false;
+      if (/^(алло|да|нет|хорошо|угу|ага)[\s.,!?-]*$/i.test(value)) return false;
+      return true;
+    }
+
+    function usefulReason(value) {
+      const text = String(value || "").trim();
+      if (!text) return "";
+      if (/фраза влияет на доверие, раскрытие темы недели или следующий шаг клиента/i.test(text)) return "";
+      return text;
     }
 
     function dedupeTranscriptSnippets(items = []) {
@@ -1381,8 +1415,8 @@
         const dialogue = Array.isArray(analysis.dialogue) ? analysis.dialogue : [];
         dialogue.forEach((line, index) => {
           const text = compactText(line?.text, 165);
-          if (!text) return;
-          const speaker = ["manager", "client", "unknown"].includes(line?.speaker) ? line.speaker : "unknown";
+          if (!meaningfulQuoteText(text)) return;
+          const speaker = correctedSpeaker(line?.speaker, text);
           snippets.push({
             manager,
             speaker,
@@ -1491,7 +1525,7 @@
       if (snippets.length) {
         cards = dedupeTranscriptSnippets(snippets)
           .filter((item) => mode === "left" ? item.speaker === "manager" : item.speaker === "client")
-          .filter((item) => mode === "left" || isSafeClientText(item.text))
+          .filter((item) => mode === "left" ? meaningfulQuoteText(item.text) : isSafeClientText(item.text))
           .sort((a, b) => mode === "right" ? Number(b.risk) - Number(a.risk) : Number(b.managerRisk) - Number(a.managerRisk))
           .slice(0, 5)
           .map((item) => ({
@@ -1537,7 +1571,10 @@
     }
 
     function renderDialogue(dialogue) {
-      const lines = Array.isArray(dialogue) ? dialogue.slice(0, 6) : [];
+      const lines = (Array.isArray(dialogue) ? dialogue : [])
+        .map((line) => ({ ...line, speaker: correctedSpeaker(line.speaker, line.text || "") }))
+        .filter((line) => meaningfulQuoteText(line.text) && line.speaker !== "unknown")
+        .slice(0, 6);
       if (!lines.length) return "";
       const label = { manager: "Менеджер", client: "Клиент", unknown: "Неясно" };
       return `
@@ -1566,13 +1603,16 @@
         ["Ясность", sub.clarity],
         ["Вступление", sub.opening],
       ].map(([name, value]) => `<div class="score-chip">${escapeHtml(name)}<b>${escapeHtml(value ?? "-")}</b></div>`).join("");
-      const quotes = Array.isArray(basis.evidence_quotes) ? basis.evidence_quotes.slice(0, 3) : [];
+      const quotes = (Array.isArray(basis.evidence_quotes) ? basis.evidence_quotes : [])
+        .map((q) => ({ ...q, phrase: q.phrase || q.text || "" }))
+        .filter((q) => meaningfulQuoteText(q.phrase))
+        .slice(0, 3);
       return `
         <details class="score-basis" open>
           <summary>Основание оценки</summary>
           <p class="note">${escapeHtml(basis.score_reason || "Оценка построена по отдельным звонкам, цитатам и sub-scores.")}</p>
           <div class="score-grid">${chips}</div>
-          ${quotes.length ? `<div class="dialogue-list" style="margin-top:10px">${quotes.map((q) => `<div class="dialogue-line"><span class="speaker">Цитата</span><span>${escapeHtml(compactText(q.phrase || q.text || "", 180))}</span></div>`).join("")}</div>` : ""}
+          ${quotes.length ? `<div class="dialogue-list" style="margin-top:10px">${quotes.map((q) => `<div class="dialogue-line"><span class="speaker">Цитата</span><span>${escapeHtml(compactText(q.phrase, 180))}</span></div>`).join("")}</div>` : ""}
         </details>`;
     }
 
@@ -1581,7 +1621,7 @@
       if (!analysis || !Object.keys(analysis).length) return "";
       const recommendations = renderList(analysis.recommendations, (x) => `${x.priority ? `[${x.priority}] ` : ""}${x.action || ""}${x.example_phrase ? ` — ${x.example_phrase}` : ""}`);
       const mistakes = renderList(analysis.mistakes, (x) => `${x.type ? `${x.type}: ` : ""}${x.evidence || x.fix || ""}${x.fix ? ` Исправить: ${x.fix}` : ""}`);
-      const phrases = renderList(analysis.good_phrases, (x) => `${x.phrase || ""}${x.why_it_works ? ` — ${x.why_it_works}` : ""}`);
+      const phrases = renderList(analysis.good_phrases, (x) => `${x.phrase || ""}${usefulReason(x.why_it_works) ? ` — ${usefulReason(x.why_it_works)}` : ""}`);
       const plan = renderList(analysis.next_shift_plan, (x) => x);
       return `
         <div class="insight-block"><h4>Что улучшить в первую очередь</h4>${recommendations}</div>
@@ -1601,8 +1641,8 @@
       const noCalls = !!data.no_calls;
       const calls = data.calls_count || 0;
       const analysis = data.analysis || data.analysis_json || {};
-      const managerScore = scoreValue(data.manager_score ?? analysis.manager_score);
-      const themeScore = scoreValue(data.weekly_theme_match_score ?? analysis.weekly_theme_match?.score);
+      const managerScore = scoreDisplay(data.manager_score ?? analysis.manager_score);
+      const themeScore = scoreDisplay(data.weekly_theme_match_score ?? analysis.weekly_theme_match?.score);
 
       const pill = $(refs.pill);
       pill.className = "pill " + (noCalls ? "off" : "ok");
@@ -1669,16 +1709,27 @@
       const call = data.call || {};
       const evidence = data.evidence || {};
       const transcript = data.transcript || {};
-      $("evidenceTitle").textContent = `${call.manager || "Звонок"} · оценка ${call.call_score || "-"}`;
-      $("evidenceSubtitle").textContent = `Длительность ${call.duration_sec || "-"} сек · качество ${call.transcript_quality || "-"}`;
-      const roleLines = Array.isArray(evidence.role_dialogue) ? evidence.role_dialogue.slice(0, 12) : [];
-      const quotes = Array.isArray(evidence.manager_quotes) ? evidence.manager_quotes : [];
+      const hasPayload = !!(call.manager || call.call_id || evidence.schema_version || transcript.text);
+      if (!hasPayload) {
+        $("evidenceTitle").textContent = "Звонок не найден";
+        $("evidenceSubtitle").textContent = "Нет доказательной базы для этой карточки";
+        $("evidenceBody").innerHTML = `<div class="evidence-section"><h4>Нет данных звонка</h4><p class="note">Эта карточка не содержит корректный call_id или evidence еще не собран. Запустите свежий анализ или обновите состояние.</p></div>`;
+        return;
+      }
+      $("evidenceTitle").textContent = `${call.manager || "Звонок"} · оценка ${scoreDisplay(call.call_score)}`;
+      $("evidenceSubtitle").textContent = `Длительность ${call.duration_sec || "-"} сек · качество ${call.transcript_quality || "не указано"}`;
+      const roleLines = (Array.isArray(evidence.role_dialogue) ? evidence.role_dialogue : [])
+        .map((line) => ({ ...line, speaker: correctedSpeaker(line.speaker, line.text || "") }))
+        .filter((line) => meaningfulQuoteText(line.text) && line.speaker !== "unknown")
+        .slice(0, 12);
+      const quotes = (Array.isArray(evidence.manager_quotes) ? evidence.manager_quotes : [])
+        .filter((item) => meaningfulQuoteText(item?.text || ""));
       const objections = (Array.isArray(evidence.client_objections) ? evidence.client_objections : [])
         .filter((item) => isSafeClientText(item?.text || "", quotes));
       $("evidenceBody").innerHTML = `
         <div class="evidence-section"><h4>Почему такая оценка</h4><p>${escapeHtml(evidence.score_reason || call.score_reason || "Основание пока не собрано.")}</p></div>
-        <div class="evidence-section"><h4>Фразы менеджера</h4>${renderList(quotes, (x) => `${x.tag ? `[${x.tag}] ` : ""}${x.text || ""}${x.why ? ` — ${x.why}` : ""}`, "Нет выделенных фраз менеджера.")}</div>
-        <div class="evidence-section"><h4>Возражения и вопросы клиента</h4>${renderList(objections, (x) => `${x.type ? `[${x.type}] ` : ""}${x.text || ""}`, "Нет выделенных клиентских возражений.")}</div>
+        <div class="evidence-section"><h4>Фразы менеджера</h4>${renderList(quotes, (x) => `${x.tag ? `[${x.tag}] ` : ""}${x.text || ""}${usefulReason(x.why) ? ` — ${usefulReason(x.why)}` : ""}`, "Нет надежно выделенных фраз менеджера.")}</div>
+        <div class="evidence-section"><h4>Возражения и вопросы клиента</h4>${renderList(objections, (x) => `${x.type ? `[${x.type}] ` : ""}${x.text || ""}`, "Нет надежно выделенных клиентских возражений.")}</div>
         <div class="evidence-section"><h4>AI-разделение ролей</h4>${roleLines.length ? `<div class="dialogue-list">${roleLines.map((line) => `<div class="dialogue-line"><span class="speaker">${escapeHtml(speakerTitle(line.speaker))}</span><span>${escapeHtml(line.text || "")}</span></div>`).join("")}</div>` : "<p class='note'>Роли пока не восстановлены.</p>"}</div>
         <div class="evidence-section"><h4>Полный transcript Whisper</h4><div class="transcript-text">${escapeHtml(transcript.text || "Текст не найден.")}</div></div>`;
     }
