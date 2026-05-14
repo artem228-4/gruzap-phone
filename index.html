@@ -1747,8 +1747,30 @@
         <div class="evidence-section"><h4>Полный transcript Whisper</h4><div class="transcript-text">${escapeHtml(transcript.text || "Текст не найден.")}</div></div>`;
     }
 
+    function callRunIdFromCallId(callId) {
+      const value = String(callId || "");
+      const index = value.lastIndexOf("_");
+      return index > 0 ? value.slice(0, index) : "";
+    }
+
+    function hasEvidencePayload(data) {
+      const call = data?.call || {};
+      const evidence = data?.evidence || {};
+      const transcript = data?.transcript || {};
+      return !!(call.manager || call.call_id || evidence.schema_version || transcript.text);
+    }
+
+    function isAccessDeniedPayload(data) {
+      const detail = String(data?.detail || data?.message || data?.error || "").toLowerCase();
+      return /invalid_access_code|access_code_missing|unauthorized|forbidden|401|403/.test(detail);
+    }
+
+    async function fetchCallEvidence(runId, callId, access_code) {
+      return extractPayload(await api("/sales-orchestrator-call-transcript", "POST", { run_id: runId, call_id: callId, access_code }));
+    }
+
     async function openCallEvidence(callId) {
-      if (!callId || !latestEvidenceRunId) return;
+      if (!callId) return;
       evidenceModal(true);
       $("evidenceBody").innerHTML = "Загружаю полный текст звонка...";
       try {
@@ -1757,7 +1779,23 @@
           renderEvidenceAccessForm(callId);
           return;
         }
-        const data = extractPayload(await api("/sales-orchestrator-call-transcript", "POST", { run_id: latestEvidenceRunId, call_id: callId, access_code }));
+        const embeddedRunId = callRunIdFromCallId(callId);
+        let requestRunId = latestEvidenceRunId || embeddedRunId || "latest";
+        let data = await fetchCallEvidence(requestRunId, callId, access_code);
+        if (isAccessDeniedPayload(data)) {
+          localStorage.removeItem("zvonarEvidenceAccessCode");
+          renderEvidenceAccessForm(callId, "Код доступа не подошел или устарел. Введите код еще раз.");
+          return;
+        }
+        if (!hasEvidencePayload(data) && embeddedRunId && embeddedRunId !== requestRunId) {
+          requestRunId = embeddedRunId;
+          data = await fetchCallEvidence(requestRunId, callId, access_code);
+          if (isAccessDeniedPayload(data)) {
+            localStorage.removeItem("zvonarEvidenceAccessCode");
+            renderEvidenceAccessForm(callId, "Код доступа не подошел или устарел. Введите код еще раз.");
+            return;
+          }
+        }
         renderEvidenceDetails(data);
       } catch (e) {
         localStorage.removeItem("zvonarEvidenceAccessCode");
