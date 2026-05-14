@@ -186,6 +186,82 @@
     .send-reports-note { margin-top: 10px; padding: 10px 12px; border: 1px solid rgba(124, 152, 204, .24); border-radius: 12px; color: var(--muted); background: rgba(5, 12, 25, .48); font-size: 13px; line-height: 1.42; }
     .send-reports-note.ok { color: #86ffd5; border-color: rgba(52, 242, 190, .35); background: rgba(5, 56, 45, .32); }
     .send-reports-note.err { color: #ffc1c1; border-color: rgba(255, 93, 117, .42); background: rgba(91, 12, 30, .35); }
+    .send-report-btn.full { grid-column: 1 / -1; }
+
+    .archive-card {
+      grid-column: 1 / -1;
+      position: relative;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 8% 0%, rgba(47, 226, 255, .13), transparent 30%),
+        radial-gradient(circle at 92% 12%, rgba(32, 217, 177, .11), transparent 34%),
+        linear-gradient(180deg, rgba(10, 21, 42, .92), rgba(6, 13, 27, .9));
+    }
+    .archive-head { display: flex; justify-content: space-between; gap: 14px; align-items: start; margin-bottom: 14px; }
+    .archive-eyebrow { margin: 0 0 6px; color: var(--cyan); font-size: 11px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+    .archive-controls { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .archive-controls button, .archive-run-btn, .archive-call-btn {
+      border: 1px solid rgba(47, 226, 255, .32);
+      background: rgba(11, 26, 51, .82);
+      color: #dce8ff;
+      padding: 9px 12px;
+      border-radius: 12px;
+      font-size: 13px;
+      min-height: auto;
+    }
+    .archive-controls b { font-family: Orbitron, sans-serif; font-size: 14px; color: #e6eeff; min-width: 86px; text-align: center; }
+    .archive-layout { display: grid; gap: 14px; }
+    .archive-calendar {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 8px;
+    }
+    .archive-day-label { color: var(--muted); font-size: 11px; font-weight: 900; text-transform: uppercase; text-align: center; padding: 3px 0; }
+    .archive-day {
+      min-height: 74px;
+      border: 1px solid rgba(124, 152, 204, .22);
+      border-radius: 14px;
+      background: rgba(8, 16, 31, .72);
+      color: #dce8ff;
+      text-align: left;
+      padding: 9px;
+      cursor: pointer;
+    }
+    .archive-day.is-empty { opacity: .45; cursor: default; }
+    .archive-day.has-runs { border-color: rgba(47, 226, 255, .48); box-shadow: inset 0 0 0 1px rgba(47, 226, 255, .08); }
+    .archive-day.is-selected { border-color: rgba(52, 242, 190, .7); box-shadow: 0 0 24px rgba(47, 226, 255, .2); }
+    .archive-day-num { display: block; font-weight: 900; margin-bottom: 5px; }
+    .archive-day-meta { display: block; color: var(--muted); font-size: 11px; line-height: 1.25; }
+    .archive-detail {
+      border: 1px solid rgba(124, 152, 204, .22);
+      border-radius: 16px;
+      background: rgba(5, 12, 25, .45);
+      padding: 14px;
+      min-height: 120px;
+    }
+    .archive-run-card, .archive-call-card {
+      border: 1px solid rgba(124, 152, 204, .22);
+      border-radius: 14px;
+      background: rgba(10, 18, 34, .78);
+      padding: 12px;
+      margin-top: 10px;
+    }
+    .archive-run-top, .archive-call-top { display: flex; justify-content: space-between; gap: 10px; align-items: start; }
+    .archive-stat-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+    .archive-stat { border: 1px solid rgba(124, 152, 204, .2); border-radius: 12px; padding: 8px; color: var(--muted); font-size: 12px; }
+    .archive-stat b { display: block; color: #e6eeff; font-family: Orbitron, sans-serif; font-size: 18px; margin-top: 3px; }
+    .scoreable-badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid rgba(52, 242, 190, .38);
+      color: #8fffe0;
+      background: rgba(9, 70, 56, .28);
+      font-size: 11px;
+      font-weight: 900;
+    }
+    .scoreable-badge.off { border-color: rgba(255, 182, 92, .42); color: #ffd09a; background: rgba(94, 58, 16, .24); }
 
     .form { display: grid; gap: 10px; margin-top: 8px; }
 
@@ -977,6 +1053,12 @@
       .customer-signal-strip { grid-template-columns: 1fr; }
       .customer-layout { grid-template-columns: 1fr; }
       .customer-grid { grid-template-columns: 1fr; }
+      .archive-head { display: grid; }
+      .archive-calendar { gap: 5px; }
+      .archive-day { min-height: 58px; padding: 7px; border-radius: 11px; }
+      .archive-day-meta { font-size: 10px; }
+      .archive-stat-grid { grid-template-columns: 1fr 1fr; }
+      .archive-run-top, .archive-call-top { display: grid; }
       .analysis-progress { grid-template-columns: 72px 1fr; }
       .progress-ring, .progress-ring svg { width: 66px; height: 66px; }
       .progress-percent { font-size: 15px; }
@@ -1061,6 +1143,7 @@
         <div class="send-reports-actions">
           <button class="send-report-btn" id="sendReportSvBtn" type="button" disabled>Отправить Светлане</button>
           <button class="send-report-btn" id="sendReportKtBtn" type="button" disabled>Отправить Константину</button>
+          <button class="send-report-btn full" id="downloadTranscriptsBtn" type="button" disabled>Скачать транскрипты PDF</button>
         </div>
         <div class="send-reports-note" id="sendReportsStatus">Отчеты станут доступны после анализа звонков.</div>
       </article>
@@ -1081,6 +1164,25 @@
         </div>
         <div class="customer-body" id="customerInsightsBody">
           <div class="customer-empty">Сначала запустите анализ звонков. После него здесь появится продуктовая сводка.</div>
+        </div>
+      </article>
+
+      <article class="card archive-card" id="archiveCard">
+        <div class="archive-head">
+          <div>
+            <p class="archive-eyebrow">ARCHIVE · 2 MONTHS</p>
+            <h2>Архив звонков</h2>
+            <p class="muted">Календарь отчетов за последние 2 месяца: оценки, исключенные звонки, саммари и полные транскрипты.</p>
+          </div>
+          <div class="archive-controls">
+            <button id="archivePrevBtn" type="button">← месяц</button>
+            <b id="archiveMonthLabel">-</b>
+            <button id="archiveNextBtn" type="button">месяц →</button>
+          </div>
+        </div>
+        <div class="archive-layout">
+          <div class="archive-calendar" id="archiveCalendar"></div>
+          <div class="archive-detail" id="archiveDetail">Выберите день с отчетом, чтобы посмотреть историю звонков и скачать транскрипты.</div>
         </div>
       </article>
 
@@ -1124,6 +1226,9 @@
 
     const BASE_URL = "https://n8n-dev.gruzapp.team/webhook";
     let latestReportForSend = null;
+    let latestReportRunId = null;
+    let archiveMonthCursor = new Date();
+    let selectedArchiveRunId = null;
     function baseUrl() {
       return BASE_URL;
     }
@@ -1219,7 +1324,7 @@
 
     function managerCanReceiveReport(data) {
       if (!data || data.no_calls) return false;
-      const calls = Number(data.calls_count || 0);
+      const calls = Number(data.calls_count || data.total_calls_count || 0);
       const analysis = data.analysis || data.analysis_json || {};
       return calls > 0 && !!Object.keys(analysis).length;
     }
@@ -1227,10 +1332,13 @@
       const svReady = managerCanReceiveReport(managers.Svetlana);
       const ktReady = managerCanReceiveReport(managers.Konstantin);
       latestReportForSend = { run_id: run?.run_id || null, Svetlana: svReady, Konstantin: ktReady };
+      latestReportRunId = run?.run_id || latestReportRunId;
       const svBtn = $("sendReportSvBtn");
       const ktBtn = $("sendReportKtBtn");
+      const pdfBtn = $("downloadTranscriptsBtn");
       if (svBtn) svBtn.disabled = !svReady;
       if (ktBtn) ktBtn.disabled = !ktReady;
+      if (pdfBtn) pdfBtn.disabled = !(run?.run_id && (svReady || ktReady));
       const status = $("sendReportsStatus");
       if (!status) return;
       status.className = "send-reports-note";
@@ -1271,11 +1379,95 @@
       }
     }
 
+    async function downloadTranscriptsPdf(runId = null) {
+      const targetRunId = runId || selectedArchiveRunId || latestReportRunId || latestReportForSend?.run_id;
+      if (!targetRunId) {
+        setSendReportStatus("Сначала нужен сохраненный отчет с транскриптами.", "err");
+        return;
+      }
+      let access_code = evidenceAccessCode();
+      if (!access_code) {
+        access_code = window.prompt("Введите код доступа к полным транскриптам");
+        if (!access_code) return;
+        localStorage.setItem("zvonarEvidenceAccessCode", access_code.trim());
+      }
+      const btn = $("downloadTranscriptsBtn");
+      try {
+        if (btn) {
+          btn.disabled = true;
+          btn.classList.add("is-sending");
+          btn.textContent = "Готовлю PDF...";
+        }
+        setSendReportStatus("Собираю красивый PDF со всеми транскриптами...", "");
+        const response = extractPayload(await api("/sales-orchestrator-transcripts-pdf", "POST", { run_id: targetRunId, access_code }));
+        if (!response.ok || !response.content_base64) throw new Error(response.detail || response.error || "PDF не сформирован");
+        downloadBlob(base64ToBlob(response.content_base64, response.mime_type), response.filename);
+        setSendReportStatus("PDF с транскриптами скачан.", "ok");
+      } catch (e) {
+        if (/access|code|401|403|invalid/i.test(e.message)) {
+          localStorage.removeItem("zvonarEvidenceAccessCode");
+        }
+        setSendReportStatus("Не удалось скачать транскрипты: " + e.message, "err");
+      } finally {
+        if (btn) {
+          btn.classList.remove("is-sending");
+          btn.textContent = "Скачать транскрипты PDF";
+          btn.disabled = !(latestReportForSend?.run_id);
+        }
+      }
+    }
+
     function formatDate(value) {
       if (!value) return "-";
       const d = new Date(value);
       if (Number.isNaN(d.getTime())) return value;
       return d.toLocaleString("ru-RU");
+    }
+
+    function monthKey(date) {
+      const d = new Date(date);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    }
+
+    function dateKey(date) {
+      const d = new Date(date);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    }
+
+    function monthLabel(month) {
+      const d = new Date(`${month}-01T00:00:00`);
+      return d.toLocaleDateString("ru-RU", { month: "long", year: "numeric" });
+    }
+
+    function outcomeLabel(value) {
+      return ({
+        substantive_dialogue: "содержательный звонок",
+        client_unavailable: "клиент занят",
+        no_substantive_dialogue: "нет полезного диалога",
+        poor_transcript: "плохая запись",
+        empty_transcript: "пустой transcript",
+      })[value] || value || "не указано";
+    }
+
+    function base64ToBlob(base64, mimeType) {
+      const bytes = atob(base64);
+      const chunks = [];
+      for (let i = 0; i < bytes.length; i += 8192) {
+        const slice = bytes.slice(i, i + 8192);
+        chunks.push(new Uint8Array([...slice].map((ch) => ch.charCodeAt(0))));
+      }
+      return new Blob(chunks, { type: mimeType || "application/pdf" });
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename || "gruzap-phone-transcripts.pdf";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1200);
     }
 
     async function api(path, method = "GET", body = null) {
@@ -1656,17 +1848,20 @@
 
       const noCalls = !!data.no_calls;
       const calls = data.calls_count || 0;
+      const totalCalls = Number(data.total_calls_count || calls || 0);
+      const excludedCalls = Number(data.excluded_calls || 0);
+      const noScoreable = !!data.no_scoreable_calls;
       const analysis = data.analysis || data.analysis_json || {};
       const managerScore = scoreDisplay(data.manager_score ?? analysis.manager_score);
       const themeScore = scoreDisplay(data.weekly_theme_match_score ?? analysis.weekly_theme_match?.score);
 
       const pill = $(refs.pill);
-      pill.className = "pill " + (noCalls ? "off" : "ok");
-      pill.textContent = noCalls ? "звонков нет" : `звонков: ${calls}`;
+      pill.className = "pill " + (noCalls || noScoreable ? "off" : "ok");
+      pill.textContent = noCalls ? "звонков нет" : `оценено: ${calls}/${totalCalls}`;
 
       $(refs.meta).textContent = noCalls
         ? "За период звонков не найдено."
-        : `Обработано звонков: ${calls}. AI JSON: ${data.ai_json_valid === false ? "резервный режим" : "валидный"}.`;
+        : `Всего звонков: ${totalCalls}. В оценку вошло: ${calls}. Исключено без штрафа: ${excludedCalls}. AI JSON: ${data.ai_json_valid === false ? "резервный режим" : "валидный"}.`;
 
       $(refs.score).innerHTML = `
         <div class="score-card"><div class="k">Оценка менеджера</div><div class="v">${managerScore}</div></div>
@@ -1679,6 +1874,11 @@
           <div class="insight-block"><h4>Ошибки и риск для продажи</h4><ul><li>Пока нет данных.</li></ul></div>
           <div class="insight-block"><h4>Сильные фразы</h4><ul><li>Пока нет данных.</li></ul></div>
           <div class="insight-block"><h4>План на следующую смену</h4><ul><li>Дождаться звонков, подходящих под период анализа.</li></ul></div>`;
+        return;
+      }
+      if (noScoreable) {
+        $(refs.text).textContent = normalizeCardText(data.report_text || analysis.summary || "Звонки были, но содержательных звонков для честной оценки нет.");
+        $(refs.insights).innerHTML = renderInsights(data);
         return;
       }
       $(refs.text).textContent = normalizeCardText(data.report_text || analysis.report_text);
@@ -1732,8 +1932,9 @@
         $("evidenceBody").innerHTML = `<div class="evidence-section"><h4>Нет данных звонка</h4><p class="note">Эта карточка не содержит корректный call_id или evidence еще не собран. Запустите свежий анализ или обновите состояние.</p></div>`;
         return;
       }
-      $("evidenceTitle").textContent = `${call.manager || "Звонок"} · оценка ${scoreDisplay(call.call_score)}`;
-      $("evidenceSubtitle").textContent = `Длительность ${call.duration_sec || "-"} сек · качество ${call.transcript_quality || "не указано"}`;
+      const isScoreable = call.is_scoreable !== false && call.is_scoreable !== 0 && call.is_scoreable !== "0";
+      $("evidenceTitle").textContent = `${call.manager || "Звонок"} · ${isScoreable ? `оценка ${scoreDisplay(call.call_score)}` : "без оценки"}`;
+      $("evidenceSubtitle").textContent = `Длительность ${call.duration_sec || "-"} сек · качество ${call.transcript_quality || "не указано"} · ${isScoreable ? "участвует в оценке" : outcomeLabel(call.call_outcome)}`;
       const roleLines = (Array.isArray(evidence.role_dialogue) ? evidence.role_dialogue : [])
         .map((line) => ({ ...line, speaker: correctedSpeaker(line.speaker, line.text || "") }))
         .filter((line) => meaningfulQuoteText(line.text) && line.speaker !== "unknown")
@@ -1743,7 +1944,7 @@
       const objections = (Array.isArray(evidence.client_objections) ? evidence.client_objections : [])
         .filter((item) => isSafeClientText(item?.text || "", quotes));
       $("evidenceBody").innerHTML = `
-        <div class="evidence-section"><h4>Почему такая оценка</h4><p>${escapeHtml(evidence.score_reason || call.score_reason || "Основание пока не собрано.")}</p></div>
+        <div class="evidence-section"><h4>${isScoreable ? "Почему такая оценка" : "Почему не участвует в оценке"}</h4><p>${escapeHtml(evidence.scoreability_reason || call.scoreability_reason || evidence.score_reason || call.score_reason || "Основание пока не собрано.")}</p>${evidence.coaching_note || call.coaching_note ? `<p class="note">${escapeHtml(evidence.coaching_note || call.coaching_note)}</p>` : ""}</div>
         <div class="evidence-section"><h4>Фразы менеджера</h4>${renderList(quotes, (x) => `${x.tag ? `[${x.tag}] ` : ""}${x.text || ""}${usefulReason(x.why) ? ` — ${usefulReason(x.why)}` : ""}`, "Нет надежно выделенных фраз менеджера.")}</div>
         <div class="evidence-section"><h4>Возражения и вопросы клиента</h4>${renderList(objections, (x) => `${x.type ? `[${x.type}] ` : ""}${x.text || ""}`, "Нет надежно выделенных клиентских возражений.")}</div>
         <div class="evidence-section"><h4>AI-разделение ролей</h4>${roleLines.length ? `<div class="dialogue-list">${roleLines.map((line) => `<div class="dialogue-line"><span class="speaker">${escapeHtml(speakerTitle(line.speaker))}</span><span>${escapeHtml(line.text || "")}</span></div>`).join("")}</div>` : "<p class='note'>Роли пока не восстановлены.</p>"}</div>
@@ -1772,7 +1973,7 @@
       return extractPayload(await api("/sales-orchestrator-call-transcript", "POST", { run_id: runId, call_id: callId, access_code }));
     }
 
-    async function openCallEvidence(callId) {
+    async function openCallEvidence(callId, explicitRunId = null) {
       if (!callId) return;
       evidenceModal(true);
       $("evidenceBody").innerHTML = "Загружаю полный текст звонка...";
@@ -1783,7 +1984,7 @@
           return;
         }
         const embeddedRunId = callRunIdFromCallId(callId);
-        let requestRunId = latestEvidenceRunId || embeddedRunId || "latest";
+        let requestRunId = explicitRunId || latestEvidenceRunId || embeddedRunId || "latest";
         let data = await fetchCallEvidence(requestRunId, callId, access_code);
         if (isAccessDeniedPayload(data)) {
           localStorage.removeItem("zvonarEvidenceAccessCode");
@@ -1819,7 +2020,8 @@
       $("period").textContent = `${period.date_from || "-"} .. ${period.date_to || "-"}`;
       $("activeTheme").textContent = theme;
       $("foundCalls").textContent = progress.total_calls ?? "-";
-      $("analyzedCalls").textContent = Math.max(Number(progress.analyzed_calls || 0), Number(progress.processed_calls || 0)) || "-";
+      const summary = payload.evidence_summary || rawPayload.result?.evidence_summary || {};
+      $("analyzedCalls").textContent = summary.scoreable_calls != null ? `${summary.scoreable_calls} / ${progress.processed_calls ?? progress.analyzed_calls ?? "-"}` : (Math.max(Number(progress.analyzed_calls || 0), Number(progress.processed_calls || 0)) || "-");
       $("remainingCalls").textContent = progress.total_calls ? Math.max(Number(progress.total_calls || 0) - Math.max(Number(progress.analyzed_calls || 0), Number(progress.processed_calls || 0)) - Number(progress.failed_calls || 0) - Number(progress.skipped_calls || 0), 0) : (progress.remaining_analysis_calls ?? progress.remaining_calls ?? "-");
       updateProgressRing(progress, runStatus, rawPayload);
       updateTranscriptFeeds(rawPayload, runStatus);
@@ -1992,6 +2194,111 @@
       }
     }
 
+    function renderArchiveCalendar(payload = {}) {
+      const month = payload.month || monthKey(archiveMonthCursor);
+      $("archiveMonthLabel").textContent = monthLabel(month);
+      const [year, mon] = month.split("-").map(Number);
+      const first = new Date(year, mon - 1, 1);
+      const daysInMonth = new Date(year, mon, 0).getDate();
+      const firstDay = (first.getDay() + 6) % 7;
+      const byDate = new Map((payload.days || []).map((day) => [day.date, day]));
+      const labels = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"].map((d) => `<div class="archive-day-label">${d}</div>`).join("");
+      const cells = [];
+      for (let i = 0; i < firstDay; i += 1) cells.push(`<button class="archive-day is-empty" type="button" disabled></button>`);
+      for (let d = 1; d <= daysInMonth; d += 1) {
+        const key = `${month}-${String(d).padStart(2, "0")}`;
+        const info = byDate.get(key);
+        const hasRuns = !!info;
+        cells.push(`
+          <button class="archive-day ${hasRuns ? "has-runs" : "is-empty"}" type="button" ${hasRuns ? `data-archive-date="${key}"` : "disabled"}>
+            <span class="archive-day-num">${d}</span>
+            <span class="archive-day-meta">${hasRuns ? `${info.total_calls || 0} звонк. · ${info.scoreable_calls || 0} оцен.` : "нет данных"}</span>
+          </button>`);
+      }
+      $("archiveCalendar").innerHTML = labels + cells.join("");
+    }
+
+    async function loadArchiveMonth(offset = 0) {
+      archiveMonthCursor = new Date(archiveMonthCursor.getFullYear(), archiveMonthCursor.getMonth() + offset, 1);
+      const payload = extractPayload(await api(`/sales-orchestrator-archive-month?month=${monthKey(archiveMonthCursor)}`, "GET"));
+      renderArchiveCalendar(payload);
+    }
+
+    function archiveRunCard(run) {
+      const managerLine = (run.managers || []).map((m) => `${m.manager}: ${m.score ?? "-"} (${m.scoreable_calls || 0}/${m.total_calls || 0})`).join(" · ") || "Менеджеры пока не рассчитаны";
+      return `
+        <div class="archive-run-card">
+          <div class="archive-run-top">
+            <div>
+              <b>${escapeHtml(run.weekly_theme || "Тема не указана")}</b>
+              <p class="muted">${escapeHtml(run.date_from || "-")} .. ${escapeHtml(run.date_to || "-")} · ${escapeHtml(managerLine)}</p>
+            </div>
+            <button class="archive-run-btn" type="button" data-archive-run="${escapeHtml(run.run_id)}">Открыть отчет</button>
+          </div>
+          <div class="archive-stat-grid">
+            <div class="archive-stat">Найдено<b>${escapeHtml(run.total_calls ?? 0)}</b></div>
+            <div class="archive-stat">Оценено<b>${escapeHtml(run.scoreable_calls ?? 0)}</b></div>
+            <div class="archive-stat">Исключено<b>${escapeHtml(run.excluded_calls ?? 0)}</b></div>
+            <div class="archive-stat">Статус<b>${escapeHtml(run.status || "-")}</b></div>
+          </div>
+        </div>`;
+    }
+
+    async function loadArchiveDay(date) {
+      document.querySelectorAll(".archive-day").forEach((el) => el.classList.toggle("is-selected", el.dataset.archiveDate === date));
+      $("archiveDetail").innerHTML = "Загружаю день архива...";
+      const payload = extractPayload(await api(`/sales-orchestrator-archive-day?date=${date}`, "GET"));
+      if (payload.expired) {
+        $("archiveDetail").innerHTML = `<p class="muted">Данные за ${escapeHtml(date)} уже удалены по правилу хранения 2 месяца.</p>`;
+        return;
+      }
+      if (!payload.runs?.length) {
+        $("archiveDetail").innerHTML = `<p class="muted">За ${escapeHtml(date)} сохраненных отчетов нет.</p>`;
+        return;
+      }
+      $("archiveDetail").innerHTML = `<h3 style="margin:0 0 8px">Отчеты за ${escapeHtml(date)}</h3>${payload.runs.map(archiveRunCard).join("")}`;
+    }
+
+    function archiveCallCard(call, runId) {
+      const scoreable = call.is_scoreable !== false && call.is_scoreable !== 0 && call.is_scoreable !== "0";
+      return `
+        <div class="archive-call-card">
+          <div class="archive-call-top">
+            <div>
+              <span class="scoreable-badge ${scoreable ? "" : "off"}">${scoreable ? "в оценке" : "без оценки"}</span>
+              <b style="display:block;margin-top:7px">${escapeHtml(call.manager || "-")} · ${escapeHtml(call.duration_sec || "-")} сек · оценка ${escapeHtml(call.call_score ?? "-")}</b>
+              <p class="muted">${escapeHtml(scoreable ? (call.short_summary || "Содержательный звонок.") : (call.scoreability_reason || outcomeLabel(call.call_outcome)))}</p>
+            </div>
+            <button class="archive-call-btn" type="button" data-call-id="${escapeHtml(call.call_id)}" data-run-id="${escapeHtml(runId)}">Открыть текст</button>
+          </div>
+        </div>`;
+    }
+
+    async function loadArchiveRun(runId) {
+      selectedArchiveRunId = runId;
+      $("archiveDetail").innerHTML = "Загружаю отчет и звонки...";
+      const payload = extractPayload(await api(`/sales-orchestrator-archive-run?run_id=${encodeURIComponent(runId)}`, "GET"));
+      const run = payload.run || {};
+      const calls = payload.calls || [];
+      $("archiveDetail").innerHTML = `
+        <div class="archive-run-card">
+          <div class="archive-run-top">
+            <div>
+              <h3 style="margin:0 0 6px">${escapeHtml(run.weekly_theme || "Архивный отчет")}</h3>
+              <p class="muted">${escapeHtml(run.date_from || "-")} .. ${escapeHtml(run.date_to || "-")}</p>
+            </div>
+            <button class="archive-run-btn" type="button" data-download-run="${escapeHtml(runId)}">Скачать транскрипты PDF</button>
+          </div>
+          <div class="archive-stat-grid">
+            <div class="archive-stat">Найдено<b>${escapeHtml(run.total_calls ?? calls.length)}</b></div>
+            <div class="archive-stat">Оценено<b>${escapeHtml(run.scoreable_calls ?? "-")}</b></div>
+            <div class="archive-stat">Исключено<b>${escapeHtml(run.excluded_calls ?? "-")}</b></div>
+            <div class="archive-stat">Статус<b>${escapeHtml(run.status || "-")}</b></div>
+          </div>
+        </div>
+        ${calls.map((call) => archiveCallCard(call, runId)).join("") || "<p class='muted'>Звонков в этом отчете нет.</p>"}`;
+    }
+
     function clearScreen() {
       $("lastRun").textContent = "-";
       $("period").textContent = "-";
@@ -2041,11 +2348,22 @@
 
     $("sendReportSvBtn").addEventListener("click", () => sendManagerReport("Svetlana"));
     $("sendReportKtBtn").addEventListener("click", () => sendManagerReport("Konstantin"));
+    $("downloadTranscriptsBtn").addEventListener("click", () => downloadTranscriptsPdf());
+    $("archivePrevBtn").addEventListener("click", () => loadArchiveMonth(-1).catch((e) => { $("archiveDetail").innerHTML = `<div class="send-reports-note err">Ошибка архива: ${escapeHtml(e.message)}</div>`; }));
+    $("archiveNextBtn").addEventListener("click", () => loadArchiveMonth(1).catch((e) => { $("archiveDetail").innerHTML = `<div class="send-reports-note err">Ошибка архива: ${escapeHtml(e.message)}</div>`; }));
     $("evidenceClose").addEventListener("click", () => evidenceModal(false));
     $("evidenceModal").addEventListener("click", (event) => { if (event.target.id === "evidenceModal") evidenceModal(false); });
     document.addEventListener("click", (event) => {
       const card = event.target.closest(".feed-card.is-clickable");
       if (card) openCallEvidence(card.dataset.callId);
+      const archiveDay = event.target.closest("[data-archive-date]");
+      if (archiveDay) loadArchiveDay(archiveDay.dataset.archiveDate).catch((e) => { $("archiveDetail").innerHTML = `<div class="send-reports-note err">Ошибка дня архива: ${escapeHtml(e.message)}</div>`; });
+      const archiveRun = event.target.closest("[data-archive-run]");
+      if (archiveRun) loadArchiveRun(archiveRun.dataset.archiveRun).catch((e) => { $("archiveDetail").innerHTML = `<div class="send-reports-note err">Ошибка отчета архива: ${escapeHtml(e.message)}</div>`; });
+      const archiveCall = event.target.closest(".archive-call-btn[data-call-id]");
+      if (archiveCall) openCallEvidence(archiveCall.dataset.callId, archiveCall.dataset.runId);
+      const downloadRun = event.target.closest("[data-download-run]");
+      if (downloadRun) downloadTranscriptsPdf(downloadRun.dataset.downloadRun);
     });
     $("saveThemeBtn").addEventListener("click", saveTheme);
     $("runBtn").addEventListener("click", runAnalysis);
@@ -2053,6 +2371,7 @@
     $("clearBtn").addEventListener("click", clearScreen);
     loadSavedTheme();
     refreshState();
+    loadArchiveMonth(0).catch((e) => { $("archiveDetail").innerHTML = `<div class="send-reports-note err">Не удалось загрузить архив: ${escapeHtml(e.message)}</div>`; });
   </script>
 </body>
 </html>
