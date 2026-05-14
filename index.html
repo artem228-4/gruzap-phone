@@ -113,6 +113,45 @@
 
     .shell { display: grid; gap: 18px; }
 
+
+    .view-tabs {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 18px;
+      padding: 6px;
+      width: fit-content;
+      max-width: 100%;
+      border: 1px solid rgba(124, 152, 204, .24);
+      border-radius: 18px;
+      background: rgba(7, 16, 35, .78);
+      box-shadow: 0 18px 48px rgba(0, 0, 0, .18), inset 0 1px 0 rgba(255, 255, 255, .05);
+    }
+    .view-tab {
+      appearance: none;
+      border: 1px solid transparent;
+      border-radius: 14px;
+      padding: 11px 16px;
+      color: var(--muted);
+      background: transparent;
+      font-weight: 900;
+      font-size: 13px;
+      letter-spacing: .01em;
+      cursor: pointer;
+      transition: border-color .18s ease, background .18s ease, color .18s ease, box-shadow .18s ease;
+    }
+    .view-tab:hover { color: #e8f0ff; border-color: rgba(47, 226, 255, .26); }
+    .view-tab.is-active {
+      color: #04101d;
+      border-color: rgba(52, 242, 190, .7);
+      background: linear-gradient(135deg, #45b2ff, #36f0ff 48%, #58f0b7);
+      box-shadow: 0 12px 30px rgba(47, 226, 255, .22);
+    }
+    body.view-main #archiveCard { display: none; }
+    body.view-archive .shell > article:not(#archiveCard),
+    body.view-archive .shell > section:not(#archiveCard) { display: none; }
+    body.view-archive #archiveCard { grid-column: 1 / -1; }
     .card {
       border: 1px solid var(--line);
       border-radius: var(--radius);
@@ -1065,7 +1104,7 @@
     }
   </style>
 </head>
-<body>
+<body class="view-main">
   <div class="grid-overlay" aria-hidden="true"></div>
 
   <main class="app">
@@ -1074,6 +1113,12 @@
       <h1>Панель контроля звонков</h1>
       <p>Задайте фокус недели, запустите анализ и получите персональные рекомендации по каждому менеджеру в живом формате.</p>
     </section>
+    <nav class="view-tabs" aria-label="Разделы панели">
+      <button class="view-tab is-active" id="mainViewTab" type="button" data-view-tab="main" aria-pressed="true">Рабочая панель</button>
+      <button class="view-tab" id="archiveViewTab" type="button" data-view-tab="archive" aria-pressed="false">Архив звонков</button>
+    </nav>
+
+
 
     <section class="shell">
       <article class="card route-card">
@@ -2298,6 +2343,21 @@
         </div>
         ${calls.map((call) => archiveCallCard(call, runId)).join("") || "<p class='muted'>Звонков в этом отчете нет.</p>"}`;
     }
+    function setAppView(view) {
+      const mode = view === "archive" ? "archive" : "main";
+      document.body.classList.toggle("view-archive", mode === "archive");
+      document.body.classList.toggle("view-main", mode !== "archive");
+      document.querySelectorAll("[data-view-tab]").forEach((button) => {
+        const active = button.dataset.viewTab === mode;
+        button.classList.toggle("is-active", active);
+        button.setAttribute("aria-pressed", active ? "true" : "false");
+      });
+      if (mode === "archive" && !$("archiveCalendar").children.length) {
+        loadArchiveMonth(0).catch((e) => { $("archiveDetail").innerHTML = '<div class="send-reports-note err">Не удалось загрузить архив: ' + escapeHtml(e.message) + '</div>'; });
+      }
+    }
+
+
 
     function clearScreen() {
       $("lastRun").textContent = "-";
@@ -2334,6 +2394,9 @@
     updateTranscriptFeeds({}, "idle");
     updateSendReportsPanel(null, {});
     renderCustomerInsights(null);
+    $("mainViewTab").addEventListener("click", () => setAppView("main"));
+    $("archiveViewTab").addEventListener("click", () => setAppView("archive"));
+
 
     $("customerInsightsBtn").addEventListener("click", () => {
       if (latestCustomerInsights) {
